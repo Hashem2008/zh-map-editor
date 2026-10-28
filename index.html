@@ -1,0 +1,1029 @@
+<!doctype html><html lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>محرر خرائط زيرو أور</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: full-screen field tool — command strip on top, map canvas, tool options drawer, tool rail at the bottom. */
+:root {
+  --bg: #11130f; --panel: #1a1d16; --raise: #23271e; --line: #343a2c;
+  --fg: #e8e4d4; --muted: #9b9a85; --accent: #e3a72f; --accent-ink: #1a1405; --danger: #d65a3c; --ok: #8fbf5a;
+  --f-display: "Reem Kufi", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+#app { height: 100%; display: flex; flex-direction: column; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; align-items: center; gap: 8px; padding-block: 8px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); }
+.brand { font-family: var(--f-display); font-weight: 700; font-size: 17px; letter-spacing: .2px; white-space: nowrap; }
+.brand small { display: block; font-family: var(--f-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; font-weight: 500; }
+.top .grow { flex: 1; min-width: 0; }
+.mapname { width: 100%; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-family: var(--f-mono); font-size: 13px; direction: ltr; text-align: left; }
+.cmd { display: flex; gap: 6px; }
+.btn { background: var(--raise); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; white-space: nowrap; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn:disabled { opacity: .4; }
+
+#stage { position: relative; flex: 1; min-height: 0; background: #0b0c09; touch-action: none; overflow: hidden; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hud { position: absolute; top: 8px; left: max(8px, env(safe-area-inset-left, 0px)); font-family: var(--f-mono); font-size: 11px; background: rgba(17,19,15,.82); border: 1px solid var(--line); border-radius: 5px; padding: 4px 7px; color: var(--muted); direction: ltr; pointer-events: none; font-variant-numeric: tabular-nums; }
+.fab { position: absolute; bottom: 10px; left: max(10px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 6px; }
+.fab button { width: 40px; height: 40px; border-radius: 8px; background: rgba(26,29,22,.92); border: 1px solid var(--line); font-size: 18px; line-height: 1; }
+.toast { position: absolute; top: 10px; right: max(10px, env(safe-area-inset-right, 0px)); max-width: 70%; background: var(--raise); border: 1px solid var(--accent); color: var(--fg); padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+
+#panel { background: var(--panel); border-top: 1px solid var(--line); padding-block: 10px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); display: grid; gap: 10px; max-height: 42vh; overflow-y: auto; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.row label { font-size: 12px; color: var(--muted); min-width: 52px; }
+.row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+.val { font-family: var(--f-mono); font-size: 12px; min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 6px 9px; font-size: 12px; color: var(--muted); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chip { flex: none; background: var(--raise); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; font-size: 12px; color: var(--muted); }
+.chip.on { border-color: var(--accent); color: var(--fg); background: #2d2716; }
+.search { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.sw { display: flex; align-items: center; gap: 7px; background: var(--raise); border: 1px solid var(--line); border-radius: 6px; padding: 5px; text-align: left; direction: ltr; min-width: 0; }
+.sw.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.sw i { flex: none; width: 22px; height: 22px; border-radius: 3px; border: 1px solid rgba(0,0,0,.35); }
+.sw span { font-family: var(--f-mono); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ob { background: var(--raise); border: 1px solid var(--line); border-radius: 6px; padding: 7px 6px; font-size: 12px; text-align: center; display: grid; gap: 2px; min-width: 0; }
+.ob b { font-weight: 600; }
+.ob small { font-family: var(--f-mono); font-size: 9.5px; color: var(--muted); direction: ltr; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ob.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.meter { font-family: var(--f-mono); font-size: 11px; color: var(--muted); direction: ltr; }
+.meter.warn { color: var(--danger); }
+
+#tools { display: flex; background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); overflow-x: auto; scrollbar-width: none; }
+.hud:empty { display: none; }
+.tool { flex: 1 0 40px; background: transparent; border: 0; border-top: 2px solid transparent; padding: 7px 2px 8px; display: grid; justify-items: center; gap: 3px; font-size: 11px; color: var(--muted); }
+.tool svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tool.on { color: var(--accent); border-top-color: var(--accent); background: #1f1c12; }
+
+.sheet { position: fixed; inset: 0; background: rgba(5,6,4,.7); display: grid; place-items: end center; z-index: 20; padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+.sheet .card { width: min(560px, 100%); max-height: 88%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px 12px 0 0; padding-block: 18px calc(18px + env(safe-area-inset-bottom, 0px)); padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; }
+.card h2 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 20px; text-wrap: balance; }
+.card p, .card li { font-size: 14px; line-height: 1.75; margin: 0; }
+.card ol { margin: 0; padding-inline-start: 20px; display: grid; gap: 6px; }
+.card code { font-family: var(--f-mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; direction: ltr; unicode-bidi: embed; word-break: break-all; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form .full { grid-column: 1 / -1; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field span { font-size: 12px; color: var(--muted); }
+.field input, .field select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; min-width: 0; width: 100%; }
+.actions { display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
+@media (min-width: 900px) {
+  #app { display: grid; grid-template-columns: 1fr 340px; grid-template-rows: auto 1fr auto; }
+  .top { grid-column: 1 / -1; }
+  #stage { grid-column: 1; grid-row: 2; }
+  #panel { grid-column: 2; grid-row: 2 / 4; max-height: none; border-top: 0; border-right: 1px solid var(--line); align-content: start; }
+  #tools { grid-column: 1; grid-row: 3; }
+}
+@media (max-width: 520px) { .brand small { display: none; } .cmd .btn.optional { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .tool, .chip, .sw, .ob { transition: background .12s, color .12s, border-color .12s; } }
+</style>
+
+<div id="app" dir="rtl">
+  <header class="top">
+    <div class="brand">محرر خرائط<small>GENERALS · ZERO HOUR</small></div>
+    <div class="grow"><input id="mapName" class="mapname" aria-label="اسم الخريطة" spellcheck="false"></div>
+    <div class="cmd">
+      <button class="btn optional" id="bNew">جديد</button>
+      <button class="btn" id="bOpen">فتح</button>
+      <button class="btn" id="bUndo" aria-label="تراجع">↶</button>
+      <button class="btn primary" id="bSave">حفظ</button>
+    </div>
+  </header>
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div class="hud" id="hud"></div>
+    <div class="fab">
+      <button id="bFit" aria-label="عرض الخريطة كاملة">⤢</button>
+      <button id="bMenu" aria-label="المزيد">⋯</button>
+    </div>
+    <div class="toast" id="toast" hidden></div>
+  </main>
+  <section id="panel" aria-label="خيارات الأداة"></section>
+  <nav id="tools" aria-label="الأدوات"></nav>
+</div>
+
+<div class="sheet" id="sheetNew" hidden>
+  <div class="card">
+    <h2>خريطة جديدة</h2>
+    <div class="form">
+      <label class="field full"><span>اسم الخريطة (إنجليزي)</span><input id="nName" value="MyMap" spellcheck="false" dir="ltr"></label>
+      <label class="field"><span>العرض (خلايا)</span><select id="nW"></select></label>
+      <label class="field"><span>الطول (خلايا)</span><select id="nH"></select></label>
+      <label class="field"><span>الأرضية الأساسية</span><select id="nTex"></select></label>
+      <label class="field"><span>الارتفاع الأساسي</span><input id="nHeight" type="number" min="0" max="200" value="16" dir="ltr"></label>
+    </div>
+    <p class="hint">كل خلية = ١٠ وحدات باللعبة. ٢٠٠×٢٠٠ حجم مناسب لخريطة ٢ لاعبين، و٣٠٠ فما فوق لـ ٤–٨ لاعبين. الحدود المخفية حول الخريطة ٣٠ خلية.</p>
+    <div class="actions"><button class="btn primary" id="nGo">إنشاء</button><button class="btn" data-close>إلغاء</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="sheetMenu" hidden>
+  <div class="card">
+    <h2>الخريطة</h2>
+    <div class="actions">
+      <button class="btn" id="mNew">خريطة جديدة</button>
+      <button class="btn" id="mOpen">فتح ملف ‎.map</button>
+      <button class="btn" id="mSaveMap">حفظ ‎.map فقط</button>
+    </div>
+    <h2>كيف أشغلها باللعبة؟</h2>
+    <ol>
+      <li>اضغط <b>حفظ</b>، بينزل ملف <code>اسم-الخريطة.zip</code> (بالتطبيق بينحفظ بمجلد <code>Download/ZH Maps</code>).</li>
+      <li>فك الضغط. بيطلع مجلد فيه ملف <code>.map</code> بنفس الاسم.</li>
+      <li>انقل المجلد كامل إلى: <code>Documents\Command and Conquer Generals Zero Hour Data\Maps\</code> (إذا مجلد Maps مش موجود، اعمله).</li>
+      <li>على الهاتف مع Winlator نفس المسار بس داخل الـ Container: <code>C:\users\xuser\Documents\...\Maps\</code></li>
+      <li>افتح اللعبة ← Skirmish ← اختار الخريطة من قائمة الخرائط.</li>
+    </ol>
+    <h2>ملاحظات</h2>
+    <p>حط نقطة بداية لكل لاعب (Player 1، 2، …): عدد النقاط هو عدد اللاعبين بالخريطة. الحواف بين الأرضيات بتطلع حادة لأن المحرر ما بيعمل دمج (blend) زي WorldBuilder. الحد الأقصى ١٦ نوع أرضية بالخريطة الوحدة. الخرائط الرسمية تقدر تفتحها وتعدل عليها، وسكربتاتها ومناطق المي فيها بتضل زي ما هي.</p>
+    <p>اللمس بإصبعين يحرك ويكبر الخريطة دايماً، مهما كانت الأداة.</p>
+    <div class="actions"><button class="btn" data-close>إغلاق</button></div>
+  </div>
+</div>
+
+<input type="file" id="fileIn" accept=".map" hidden>
+
+<script>
+const TERRAINS=[["AsphaltType1","ASPHALT",2,"706e63"],["AsphaltType2","ASPHALT",2,"7a807d"],["AsphaltType3","ASPHALT",2,"666a67"],["BridgeAsphaltBlend","ASPHALT",1,"828387"],["ParkingLotType1a","ASPHALT",2,"747368"],["ParkingLotType1b","ASPHALT",2,"747368"],["ParkingLotType1c","ASPHALT",2,"747368"],["ParkingLotType1d","ASPHALT",2,"747368"],["SandMediumType5c","DESERT_DRY",4,"eec05f"],["Cobble02","DESERT_DRY",4,"9a8f73"],["SandType2wavy","DESERT_DRY",2,"aa9783"],["SandType2","DESERT_DRY",2,"b29d85"],["Cobble04","DESERT_DRY",10,"947a58"],["SandLargeType2","DESERT_DRY",6,"edcb81"],["SandLargeType3Light","DESERT_DRY",6,"eedb9e"],["RocksType6","DESERT_DRY",2,"a49478"],["SandMediumType7Light","DESERT_DRY",4,"e6d8a1"],["SandMediumType5","DESERT_DRY",4,"e6d29f"],["SandMediumType5b","DESERT_DRY",4,"d1b279"],["SandMediumType2","DESERT_DRY",4,"bda372"],["SandMediumType3","DESERT_DRY",4,"ceb17a"],["SandMediumType4","DESERT_DRY",4,"ead197"],["CliffMediumType24b","Desert_1",4,"bbad92"],["CliffMediumType5b","DESERT_1",4,"968666"],["CliffMediumType6b","Desert_1",4,"9a9679"],["CliffMediumType9b","Desert_1",4,"9e967c"],["CliffMediumType10b","Desert_1",4,"918873"],["CliffMediumType13b","Desert_1",4,"a49c82"],["CliffMediumType15","Desert_1",4,"84877b"],["CliffLargeType3","Desert_1",6,"6d6b47"],["CliffLargeType13","Desert_1",6,"9a9474"],["DirtMediumType8","Desert_1",4,"cdac76"],["DirtMediumType9","Desert_1",4,"c2ae89"],["DirtMediumType10","Desert_1",4,"c0a26b"],["DirtMediumType11","Desert_1",4,"ccb17d"],["GrassMediumType27olive","Desert_1",4,"8b8a57"],["GrassMediumType29","Desert_1",4,"c1a974"],["GrassMediumType36","Desert_1",4,"ab9159"],["RocksMediumType1","Desert_1",4,"c6a976"],["SandMediumType6","Desert_1",4,"ceb17a"],["SandMediumType7","Desert_1",4,"dbba81"],["SandMediumType7Rocky","Desert_1",4,"dabb86"],["SandMediumType7Grassy","Desert_1",4,"c3a86d"],["SandMediumType8","Desert_1",4,"bea975"],["SandMediumType10","Desert_1",4,"d2b379"],["SandMediumType10brown","Desert_1",4,"d4b375"],["SandMediumType12Grassy","Desert_1",4,"baa665"],["SandMediumType13b","Desert_1",4,"f7e6c3"],["SandMediumType13c","Desert_1",4,"f2e2be"],["SandMediumType13d","Desert_1",4,"e7d7b5"],["SandMediumType13grassy","Desert_1",4,"e3d4b4"],["SandMediumType14light","Desert_1",4,"fdf8d8"],["SandMediumType13grassy3","Desert_1",4,"e5d5ad"],["SandLargeType3","Desert_1",6,"dcb97c"],["SandLargeType3Grassy","Desert_1",6,"c4a86c"],["SandLargeType3Rocky1","Desert_1",6,"dab980"],["SandLargeType3Rocky2","Desert_1",6,"dbba7f"],["SandLargeType3Rocky3","Desert_1",6,"dcb97d"],["SandLargeType3Rocky&Grassy","Desert_1",6,"c4a96d"],["SandType4","Desert_1",2,"d6b77f"],["CliffMediumType19","Desert_2",4,"b79a66"],["CliffMediumType20","Desert_2",4,"bd9f72"],["CliffLargeType9","Desert_2",6,"ac9367"],["CliffLargeType10","Desert_2",4,"b69d6c"],["CliffLargeType11","Desert_2",10,"bc9e64"],["CliffLargeType12","Desert_2",10,"b19560"],["DirtMediumType12","Desert_2",4,"c7a05c"],["DirtMediumType13","Desert_2",2,"c89f55"],["GrassLargeType2","Desert_2",6,"94903a"],["GrassMediumType32","Desert_2",4,"ad9c4f"],["GrassMediumType34","Desert_2",4,"928d4a"],["GrassMediumType35","Desert_2",4,"cbb06a"],["RocksType6","Desert_2",2,"a49478"],["RocksType7","Desert_2",2,"a8a297"],["SandMediumType9","Desert_2",4,"d4a653"],["SandMediumType9blue","Desert_2",4,"5180b0"],["SandMediumType9blue2","Desert_2",4,"6f99ae"],["SandMediumType9blue3","Desert_2",4,"9db0b8"],["SandMediumType9blue4","Desert_2",4,"dde8ed"],["SandMediumType9b","Desert_2",4,"b89d68"],["SandMediumType11","Desert_2",4,"d0a64d"],["SandLargeType4Grassy","Desert_2",6,"c7a862"],["SandLargeType4","Desert_2",6,"d4a85f"],["SandType3","Desert_2",2,"c79c51"],["SandType3wet","Desert_2",2,"9c7a3f"],["SandType3wavy","Desert_2",2,"c89b4d"],["SandType6","Desert_2",4,"b79b47"],["SandToxicSpill1","SAND_ACCENT",2,"b27a5c"],["SandToxicSpill2","SAND_ACCENT",2,"b3a84f"],["SandToxicSpill3","SAND_ACCENT",2,"604138"],["SandLargeType3Grassy","SAND_ACCENT",6,"c4a86c"],["SandType1","SAND_ACCENT",2,"a98365"],["SandType1dark","SAND_ACCENT",2,"8d694d"],["SandType1darker","SAND_ACCENT",2,"76543b"],["SandLargeType2Grassy","SAND_ACCENT",6,"d2b56c"],["SandMediumType7GrassyLight","SAND_ACCENT",4,"dece98"],["SandMediumType5grassy","SAND_ACCENT",4,"d0c090"],["SandMediumType1","SAND_ACCENT",4,"9b988c"],["SandMediumType9blue","BEACH_TROPICAL",4,"5180b0"],["SandMediumType9blue2","BEACH_TROPICAL",4,"6f99ae"],["SandMediumType9blue3","BEACH_TROPICAL",4,"9db0b8"],["SandMediumType9blue4","BEACH_TROPICAL",4,"dde8ed"],["SandLargeType3Light","BEACH_TROPICAL",6,"eedb9e"],["SandMediumType13b","BEACH_TROPICAL",4,"f7e6c3"],["SandMediumType13c","BEACH_TROPICAL",4,"f2e2be"],["SandMediumType13d","BEACH_TROPICAL",4,"e7d7b5"],["SandMediumType13grassy2","BEACH_TROPICAL",4,"b7ab74"],["SandMediumType13grassy3","BEACH_TROPICAL",4,"e5d5ad"],["SandMediumType13grassy4","BEACH_TROPICAL",4,"dbce9d"],["SandMediumType13","BEACH_TROPICAL",4,"f7e7c4"],["SandMediumType6","BEACH_TROPICAL",4,"ceb17a"],["SandMediumType6Light","BEACH_TROPICAL",4,"e5d498"],["SandMediumType7Light","BEACH_TROPICAL",4,"e6d8a1"],["SandMediumType9b","BEACH_PARK",4,"b89d68"],["GrassMediumType13Light","BEACH_PARK",4,"889856"],["GrassMediumType22","BEACH_PARK",4,"7e854f"],["WoodBridgeBlend1","BEACH_PARK",1,"9f9787"],["WoodType1","BEACH_PARK",2,"928577"],["SandType4","BEACH_PARK",2,"d6b77f"],["SandMediumType6","BEACH_PARK",4,"ceb17a"],["DirtMediumType11","BEACH_PARK",4,"ccb17d"],["DirtMediumType3","BEACH_PARK",4,"b09e86"],["GrassMediumType13","BEACH_PARK",4,"697644"],["CliffLargeType3b","MOUNTAIN_RUGGED",6,"99966b"],["CliffMediumType4","MOUNTAIN_RUGGED",4,"848781"],["CliffMediumType6c","MOUNTAIN_RUGGED",4,"bab592"],["CliffMediumType6snow","MOUNTAIN_RUGGED",4,"bebcaf"],["CliffMediumType8","MOUNTAIN_RUGGED",4,"838486"],["CliffMediumType10","MOUNTAIN_RUGGED",4,"747678"],["CliffMediumType12","MOUNTAIN_RUGGED",4,"706c61"],["CliffMediumType23","MOUNTAIN_RUGGED",4,"7c7b77"],["CliffMediumType15b","MOUNTAIN_RUGGED",4,"928e6d"],["CliffMediumType16","MOUNTAIN_RUGGED",4,"8a8c86"],["CliffMediumType17","MOUNTAIN_RUGGED",4,"9b9372"],["CliffMediumType17b","MOUNTAIN_RUGGED",4,"908780"],["CliffMediumType17bsnowy","MOUNTAIN_RUGGED",4,"aaa5a0"],["CliffMediumType9","MOUNTAIN_RUGGED",4,"8f8f8e"],["GrassMediumType23","MOUNTAIN_RUGGED",4,"707763"],["GrassMediumType16","MOUNTAIN_RUGGED",4,"828366"],["GrassMediumType17","MOUNTAIN_RUGGED",4,"75764c"],["GrassMediumType10","MOUNTAIN_RUGGED",4,"656a38"],["GrassMediumType10b","MOUNTAIN_RUGGED",4,"868e45"],["GrassMediumType11","MOUNTAIN_RUGGED",4,"797940"],["GrassMediumType11b","MOUNTAIN_RUGGED",4,"70634d"],["DirtType1","MOUNTAIN_RUGGED",2,"7d6a57"],["DirtMediumType1","MOUNTAIN_RUGGED",4,"595850"],["DirtMediumType5","MOUNTAIN_RUGGED",4,"8a8372"],["DirtMediumType14","MOUNTAIN_RUGGED",4,"85807c"],["CliffLargeType8","MOUNTAIN_RUGGED",6,"878a82"],["GrassMediumType9","MOUNTAIN_RUGGED",4,"6c5c45"],["GrassMediumType4","MOUNTAIN_RUGGED",4,"6c6959"],["GrassMediumType20","MOUNTAIN_RUGGED",4,"7a8863"],["GrassMediumType24","MOUNTAIN_RUGGED",4,"78835b"],["CliffMediumType1","MOUNTAIN_RUGGED",4,"838779"],["CliffLargeType1","MOUNTAIN_RUGGED",6,"908780"],["DirtMediumType14","MOUNTAIN_RUGGED",4,"85807c"],["DirtMediumType7","MOUNTAIN_RUGGED",4,"9fa09f"],["CliffMediumType5","MOUNTAIN_RUGGED",4,"828282"],["RocksType3","MOUNTAIN_RUGGED",2,"6c705f"],["GrassMediumType37a","GRASS_COBBLESTONE",4,"697628"],["GrassMediumType37b","GRASS_COBBLESTONE",4,"5f6c19"],["GrassMediumType37c","GRASS_COBBLESTONE",4,"646e46"],["GrassMediumType37d","GRASS_COBBLESTONE",4,"5e5a2f"],["GrassMediumType37e","GRASS_COBBLESTONE",4,"949e42"],["GrassMediumType37f","GRASS_COBBLESTONE",4,"778736"],["GrassMediumType37g","GRASS_COBBLESTONE",4,"616033"],["GrassMediumType38a","GRASS_COBBLESTONE",4,"4c5b1e"],["Grass02","GRASS_COBBLESTONE",10,"748237"],["Cobble01","GRASS_COBBLESTONE",4,"968671"],["Cobble03","GRASS_COBBLESTONE",4,"8a7a6b"],["RocksType4","GRASS_COBBLESTONE",2,"727567"],["RocksMediumType1","GRASS_COBBLESTONE",4,"c6a976"],["CobblestoneType1","GRASS_COBBLESTONE",2,"8a816b"],["GrassMediumType31","GRASS_COBBLESTONE",4,"65802d"],["GrassMediumType30","GRASS_COBBLESTONE",4,"676b3b"],["GrassMediumType12Leaves","GRASS_COBBLESTONE",4,"594d33"],["GrassMediumType10","GRASS_COBBLESTONE",4,"656a38"],["GrassMediumType7","GRASS_COBBLESTONE",4,"65792d"],["GrassMediumType8","GRASS_COBBLESTONE",4,"4c5b1e"],["DirtType1","GRASS_ACCENT",2,"7d6a57"],["DirtType2","GRASS_ACCENT",2,"7a583a"],["DirtType3","GRASS_ACCENT",2,"73563c"],["GrassMediumType26","GRASS_ACCENT",4,"7b8c52"],["GrassMediumType19","GRASS_ACCENT",4,"8e9489"],["GrassMediumType13Leaves","GRASS_ACCENT",4,"625937"],["GrassMediumType15","GRASS_ACCENT",4,"7f935a"],["GrassMediumType25","GRASS_ACCENT",4,"808366"],["GrassMediumType1","GRASS_ACCENT",4,"8e934f"],["GrassMediumType2","GRASS_ACCENT",4,"8e9269"],["GrassMediumType14","GRASS_ACCENT",4,"506c45"],["GrassType1","RESIDENTIAL",2,"536b32"],["GrassLargeType1","RESIDENTIAL",6,"7e814e"],["GrassMediumType5","RESIDENTIAL",4,"958d69"],["GrassMediumType6","RESIDENTIAL",4,"888459"],["GrassMediumType7","RESIDENTIAL",4,"65792d"],["GrassMediumType12","RESIDENTIAL",4,"71754a"],["GrassMediumType18","RESIDENTIAL",4,"74a055"],["GrassMediumType21","RESIDENTIAL",4,"7e7c45"],["GrassMediumType22","RESIDENTIAL",4,"7e854f"],["GrassMediumType28","RESIDENTIAL",4,"9c7f60"],["GrassMediumType33","RESIDENTIAL",4,"6f853b"],["DirtMediumType1","RESIDENTIAL",4,"595850"],["DirtMediumType2","RESIDENTIAL",4,"4b4e3f"],["DirtType2","RESIDENTIAL",2,"7a583a"],["CropsType1","RESIDENTIAL",4,"848551"],["DirtMediumType15Snow","SNOW_RUGGED",4,"ececeb"],["DirtSnowType1","SNOW_RUGGED",4,"c0beb9"],["RocksMediumType1Snow","SNOW_RUGGED",4,"bbbbbb"],["CliffMediumType15snow","SNOW_RUGGED",4,"b4b6b1"],["CliffMediumType22","SNOW_RUGGED",4,"c0c0c0"],["CliffLargeType1snow","SNOW_RUGGED",6,"aba6a2"],["GrassMediumType23","SNOW_RUGGED",4,"707763"],["SandMediumType9Snow","SNOW_RUGGED",4,"dab97d"],["SandMediumType9Snow2","SNOW_RUGGED",4,"dfc79c"],["SandMediumType9Snow3","SNOW_RUGGED",4,"e3d3b8"],["SnowType1","SNOW_FLAT",2,"d3d4ca"],["DirtMediumType15Snow","SNOW_FLAT",4,"ececeb"],["SnowType2","SNOW_FLAT",2,"d4dae0"],["SnowType3","SNOW_FLAT",2,"d9dcd8"],["SnowType4","SNOW_FLAT",2,"ececec"],["SnowType5","SNOW_FLAT",4,"dfdfdf"],["SnowType7","SNOW_FLAT",4,"bbb994"],["SnowType7b","SNOW_FLAT",4,"d3d2bf"],["SnowType7c","SNOW_FLAT",4,"ddddd3"],["SnowLargeType1","SNOW_FLAT",6,"f0f0f0"],["SnowType6","SNOW_FLAT",4,"e9e9e9"],["ConcreteMediumType1Snow","SNOW_FLAT",4,"afb0af"],["GrassMediumType27brown","SNOW_FLAT",4,"d3bc8f"],["GrassLargeType1Snow","SNOW_FLAT",6,"95976d"],["SandMediumType13grassy3","SNOW_FLAT",4,"e5d5ad"],["SandMediumType13grassy2","SNOW_FLAT",4,"b7ab74"],["GrassMediumType27","FIELD",4,"758155"],["DirtMediumType5","FIELD",4,"8a8372"],["GrassMediumType11b","FIELD",4,"70634d"],["DirtType1","FIELD",2,"7d6a57"],["GreeceSand01","FIELD",2,"a99054"],["Cobble04","FIELD",10,"947a58"],["GrassMediumType22","FIELD",4,"7e854f"],["GrassMediumType1","FIELD",4,"8e934f"],["WoodType1","FIELD",2,"928577"],["DirtMediumType14","FIELD",4,"85807c"],["RocksType5","FIELD",2,"bdaa82"],["WoodType1small","FIELD",2,"938676"],["GrassMediumType3","FIELD",4,"666a45"],["GrassMediumType37d","FIELD",4,"5e5a2f"],["GrassMediumType37g","FIELD",4,"616033"],["ConcreteMediumType1","CONCRETE",4,"9a9b9a"],["ConcreteMediumType1Snow","CONCRETE",4,"afb0af"],["ConcreteType1","CONCRETE",2,"959791"],["ConcreteType2","CONCRETE",2,"9b9b9b"],["ConcreteType3","CONCRETE",2,"b0b4b1"],["ConcreteType4","CONCRETE",2,"989385"],["ConcreteType4","CONCRETE",2,"989385"],["ConcreteType5","CONCRETE",2,"b5b0a5"],["ConcreteType6","CONCRETE",2,"c8c5bb"],["ConcreteType7","CONCRETE",2,"c8c5bc"],["DirtMediumType4","ROCK_ACCENT",4,"acb1ad"],["CliffLargeType2","ROCK_ACCENT",6,"9a767e"],["CliffLargeType4","ROCK_ACCENT",6,"55444e"],["RocksType3blue","ROCK_ACCENT",2,"567488"],["CliffLargeType7","ROCK_ACCENT",6,"85837f"],["CliffMediumType11","ROCK_ACCENT",4,"6e7d55"],["CliffMediumType21","ROCK_ACCENT",4,"7c8880"],["CliffLargeType6","TRANSITION",6,"878874"],["CliffLargeType6b","TRANSITION",6,"90916b"],["CliffLargeType7","TRANSITION",6,"85837f"],["CliffMediumType13","TRANSITION",4,"949a95"],["CliffMediumType14","TRANSITION",4,"7e956a"],["CliffMediumType18","TRANSITION",4,"a48967"],["CliffMediumType2","TRANSITION",4,"8e8b87"],["CliffMediumType3","TRANSITION",4,"82837f"],["CliffLargeType6","TRANSITION",6,"878874"],["CliffLargeType7","TRANSITION",6,"85837f"],["CliffMediumType8b","TRANSITION",4,"978f6e"],["GrassMediumType23brown","TRANSITION",4,"a89a6d"],["RocksMediumType1Snow2","TRANSITION",4,"868686"],["RocksType1","TRANSITION",2,"828685"],["RocksType2","TRANSITION",2,"908f8f"],["SandLargeType1","TRANSITION",6,"b19b84"]];
+const LIGHT_B64="AQAAAP/+/j7NzMw+mZiYPublZT+zsjI/9fT0PuqzUb9vCQO/8oOEvv/+/j7NzMw+mZiYPublZT+zsjI/9fT0PuqzUb9vCQO/8oOEvgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHX4jjwAAAAABfZ/vwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHX4jjwAAAAABfZ/vwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHX4jjwAAAAABfZ/vwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHX4jjwAAAAABfZ/v9PeYD4py1A+16MwPgAAgD8AAIA/AACAPylcT79cj8I+ZmbmvtPeYD4py1A+16MwPgAAgD8AAIA/AACAPylcT79cj8I+ZmbmvgAAAAAAAAAAAAAAAHzycD588nA+SZ2gPnE9Sj9SuB4/AAAAAAAAAAAAAAAAAAAAAEXY8D1F2PA9LpCgPSlcTz+PwvW+exSuvgAAAAAAAAAAAAAAAHzycD588nA+fPLwPnE9Sj9SuB4/AAAAAAAAAAAAAAAAAAAAAEXY8D1F2PA9LpCgPSlcTz+PwvW+exSuvgAAgD4fhWs+zcxMPpqZGT8AAAA/zczMPgAAgL8AAAAAzcxMvgAAgD4fhWs+zcxMPpqZGT8AAAA/zczMPgAAgL8AAAAAzcxMvgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAv83MzD3NzMw9mpkZPs3MTD7NzEw+mpmZPgAAgL8AAIA/AAAAwM3MzD3NzMw9mpkZPs3MTD7NzEw+mpmZPgAAgL8AAIA/AAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAv6CgoH8=";
+
+</script>
+<script>
+// ---- Generals ZH .map format core (shared by the page and the node tests) ----
+const T = TERRAINS.map(([n, c, w, rgb]) => ({
+  n, c, w,
+  r: parseInt(rgb.slice(0, 2), 16), g: parseInt(rgb.slice(2, 4), 16), b: parseInt(rgb.slice(4, 6), 16)
+}));
+const T_INDEX = new Map(T.map((t, i) => [t.n, i]));
+const MAX_CLASSES = 16;
+const DICT_BOOL = 0, DICT_INT = 1, DICT_REAL = 2, DICT_ASCII = 3, DICT_UNI = 4;
+
+function b64ToBytes(s) {
+  const bin = atob(s); const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// EA RefPack decompression (maps inside MapsZH.big start with "EAR\0").
+function refpack(src) {
+  let i = 0;
+  const hdr = (src[0] << 8) | src[1]; i = 2;
+  let size;
+  if (hdr & 0x8000) { if (hdr & 0x100) i += 4; size = (src[i] << 24 | src[i + 1] << 16 | src[i + 2] << 8 | src[i + 3]) >>> 0; i += 4; }
+  else { if (hdr & 0x100) i += 3; size = src[i] << 16 | src[i + 1] << 8 | src[i + 2]; i += 3; }
+  const out = new Uint8Array(size); let o = 0;
+  const lit = n => { out.set(src.subarray(i, i + n), o); o += n; i += n; };
+  while (i < src.length && o < size) {
+    const b0 = src[i]; let ln, off;
+    if (b0 < 0x80) {
+      const b1 = src[i + 1]; i += 2; lit(b0 & 3);
+      ln = ((b0 & 0x1c) >> 2) + 3; off = ((b0 & 0x60) << 3) + b1 + 1;
+    } else if (b0 < 0xc0) {
+      const b1 = src[i + 1], b2 = src[i + 2]; i += 3; lit(b1 >> 6);
+      ln = (b0 & 0x3f) + 4; off = ((b1 & 0x3f) << 8) + b2 + 1;
+    } else if (b0 < 0xe0) {
+      const b1 = src[i + 1], b2 = src[i + 2], b3 = src[i + 3]; i += 4; lit(b0 & 3);
+      ln = ((b0 & 0x0c) << 6) + b3 + 5; off = ((b0 & 0x10) << 12) + (b1 << 8) + b2 + 1;
+    } else if (b0 < 0xfc) { i += 1; lit(((b0 & 0x1f) << 2) + 4); continue; }
+    else { i += 1; lit(b0 & 3); break; }
+    for (let k = 0; k < ln; k++, o++) out[o] = out[o - off];
+  }
+  return out;
+}
+
+class Reader {
+  constructor(bytes, p = 0) { this.d = bytes; this.v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); this.p = p; }
+  i32() { const x = this.v.getInt32(this.p, true); this.p += 4; return x; }
+  u32() { const x = this.v.getUint32(this.p, true); this.p += 4; return x; }
+  u16() { const x = this.v.getUint16(this.p, true); this.p += 2; return x; }
+  f32() { const x = this.v.getFloat32(this.p, true); this.p += 4; return x; }
+  u8() { return this.d[this.p++]; }
+  ascii() { const n = this.u16(); let s = ''; for (let k = 0; k < n; k++) s += String.fromCharCode(this.d[this.p + k]); this.p += n; return s; }
+  uni() { const n = this.u16(); let s = ''; for (let k = 0; k < n; k++) s += String.fromCharCode(this.v.getUint16(this.p + 2 * k, true)); this.p += 2 * n; return s; }
+}
+
+class Writer {
+  constructor(toc) { this.b = new Uint8Array(1 << 20); this.n = 0; this.toc = toc; this.stack = []; }
+  ensure(k) { if (this.n + k > this.b.length) { const nb = new Uint8Array(Math.max(this.b.length * 2, this.n + k)); nb.set(this.b.subarray(0, this.n)); this.b = nb; } }
+  dv() { return new DataView(this.b.buffer); }
+  u8(x) { this.ensure(1); this.b[this.n++] = x & 255; }
+  u16(x) { this.ensure(2); this.dv().setUint16(this.n, x, true); this.n += 2; }
+  i32(x) { this.ensure(4); this.dv().setInt32(this.n, x, true); this.n += 4; }
+  f32(x) { this.ensure(4); this.dv().setFloat32(this.n, x, true); this.n += 4; }
+  bytes(a) { this.ensure(a.length); this.b.set(a, this.n); this.n += a.length; }
+  ascii(s) { this.u16(s.length); for (let k = 0; k < s.length; k++) this.u8(s.charCodeAt(k)); }
+  uni(s) { this.u16(s.length); for (let k = 0; k < s.length; k++) this.u16(s.charCodeAt(k)); }
+  id(name) { const m = this.toc.map; if (!m.has(name)) m.set(name, this.toc.next++); return m.get(name); }
+  open(name, ver) { this.i32(this.id(name)); this.u16(ver); this.stack.push(this.n); this.i32(0xffff); }
+  close() { const p = this.stack.pop(); this.dv().setInt32(p, this.n - p - 4, true); }
+  dict(entries) {
+    this.u16(entries.length);
+    for (const [k, t, v] of entries) {
+      this.i32((this.id(k) << 8) | t);
+      if (t === DICT_BOOL) this.u8(v ? 1 : 0);
+      else if (t === DICT_INT) this.i32(v);
+      else if (t === DICT_REAL) this.f32(v);
+      else if (t === DICT_ASCII) this.ascii(v);
+      else this.uni(v);
+    }
+  }
+  finish() {
+    const ents = [...this.toc.map.entries()].sort((a, b) => b[1] - a[1]);
+    const head = new Writer({ map: new Map(), next: 1 });
+    head.bytes([67, 107, 77, 112]); // CkMp
+    head.i32(ents.length);
+    for (const [name, id] of ents) { head.u8(name.length); for (let k = 0; k < name.length; k++) head.u8(name.charCodeAt(k)); head.i32(id); }
+    const out = new Uint8Array(head.n + this.n);
+    out.set(head.b.subarray(0, head.n)); out.set(this.b.subarray(0, this.n), head.n);
+    return out;
+  }
+}
+
+function readDict(r, names) {
+  const n = r.u16(), out = [];
+  for (let k = 0; k < n; k++) {
+    const kt = r.i32(), t = kt & 255, key = names[kt >>> 8];
+    let v;
+    if (t === DICT_BOOL) v = !!r.u8();
+    else if (t === DICT_INT) v = r.i32();
+    else if (t === DICT_REAL) v = r.f32();
+    else if (t === DICT_ASCII) v = r.ascii();
+    else v = r.uni();
+    out.push([key, t, v]);
+  }
+  return out;
+}
+
+// ---- Map model ----
+function newMap(name, pw, ph, border, height, texIdx) {
+  const W = pw + 2 * border, H = ph + 2 * border;
+  const m = {
+    name, W, H, border, boundaries: [[pw, ph]],
+    heights: new Uint8Array(W * H).fill(height),
+    tex: new Uint16Array(W * H).fill(texIdx),
+    objects: [], chunks: null, toc: null, texDirty: true
+  };
+  return m;
+}
+
+function parseMap(buf) {
+  let d = new Uint8Array(buf);
+  if (d[0] === 69 && d[1] === 65 && d[2] === 82 && d[3] === 0) d = refpack(d.subarray(8));
+  if (!(d[0] === 67 && d[1] === 107 && d[2] === 77 && d[3] === 112)) throw new Error('الملف مش خريطة جنرال (ما فيه CkMp)');
+  const r = new Reader(d, 4);
+  const count = r.i32(), names = {}, tocMap = new Map(); let maxId = 0;
+  for (let k = 0; k < count; k++) {
+    const len = r.u8(); let s = ''; for (let j = 0; j < len; j++) s += String.fromCharCode(d[r.p + j]); r.p += len;
+    const id = r.u32(); names[id] = s; tocMap.set(s, id); maxId = Math.max(maxId, id);
+  }
+  const m = { name: '', objects: [], chunks: [], toc: { map: tocMap, next: maxId + 1 }, texDirty: false };
+  let blend = null;
+  while (r.p + 10 <= d.length) {
+    const start = r.p, id = r.u32(), ver = r.u16(), size = r.i32(), body = r.p, end = body + size;
+    const nm = names[id];
+    if (nm === 'HeightMapData') {
+      m.W = r.i32(); m.H = r.i32(); m.border = ver >= 3 ? r.i32() : 0;
+      if (ver >= 4) { const nb = r.i32(); m.boundaries = []; for (let k = 0; k < nb; k++) m.boundaries.push([r.i32(), r.i32()]); }
+      else m.boundaries = [[m.W - 2 * m.border, m.H - 2 * m.border]];
+      const ds = r.i32(); m.heights = d.slice(r.p, r.p + ds);
+      m.chunks.push({ kind: 'height' });
+    } else if (nm === 'BlendTileData') {
+      blend = { ver, raw: d.slice(start, end), body, size };
+      m.chunks.push({ kind: 'blend' });
+    } else if (nm === 'ObjectsList') {
+      const or = new Reader(d, body);
+      while (or.p < end) {
+        or.u32(); const over = or.u16(), osz = or.i32(), oend = or.p + osz;
+        const o = { x: or.f32(), y: or.f32(), z: or.f32(), angle: or.f32(), flags: or.i32(), name: or.ascii(), dict: [] };
+        if (over >= 3 && or.p < oend) o.dict = readDict(or, names);
+        m.objects.push(o); or.p = oend;
+      }
+      m.chunks.push({ kind: 'objects' });
+    } else {
+      m.chunks.push({ kind: 'raw', raw: d.slice(start, end), name: nm });
+    }
+    r.p = end;
+  }
+  if (!m.heights) throw new Error('الخريطة ما فيها بيانات ارتفاعات');
+  m.tex = new Uint16Array(m.W * m.H);
+  m.blendRaw = blend ? blend.raw : null;
+  if (blend && blend.ver === 8) {
+    const br = new Reader(d, blend.body), ds = br.i32();
+    const tiles = new Int16Array(ds); for (let k = 0; k < ds; k++) tiles[k] = br.v.getInt16(br.p + 2 * k, true);
+    br.p += ds * 8 + m.H * ((m.W + 7) >> 3);
+    br.i32(); br.i32(); br.i32();
+    const nc = br.i32(), classes = [];
+    for (let k = 0; k < nc; k++) {
+      const first = br.i32(), num = br.i32(), width = br.i32(); br.i32(); const cname = br.ascii();
+      let ti = T_INDEX.get(cname);
+      if (ti === undefined) { ti = T.length; T.push({ n: cname, c: 'OTHER', w: width, r: 128, g: 128, b: 120 }); T_INDEX.set(cname, ti); }
+      classes.push({ first, num, ti });
+    }
+    for (let k = 0; k < ds; k++) {
+      const tile = tiles[k] >> 2; let ti = classes.length ? classes[0].ti : 0;
+      for (const c of classes) if (tile >= c.first && tile < c.first + c.num) { ti = c.ti; break; }
+      m.tex[k] = ti;
+    }
+  }
+  return m;
+}
+
+function usedClasses(m) {
+  const seen = new Uint8Array(T.length), list = [];
+  for (let k = 0; k < m.tex.length; k++) { const t = m.tex[k]; if (!seen[t]) { seen[t] = 1; list.push(t); } }
+  return list;
+}
+
+function writeHeight(w, m) {
+  w.open('HeightMapData', 4);
+  w.i32(m.W); w.i32(m.H); w.i32(m.border);
+  w.i32(m.boundaries.length); for (const [x, y] of m.boundaries) { w.i32(x); w.i32(y); }
+  w.i32(m.W * m.H); w.bytes(m.heights);
+  w.close();
+}
+
+function writeBlend(w, m) {
+  const classes = usedClasses(m), first = new Int32Array(T.length).fill(-1);
+  let tiles = 0;
+  for (const t of classes) { first[t] = tiles; tiles += T[t].w * T[t].w; }
+  const ds = m.W * m.H, ndx = new Int16Array(ds);
+  for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) {
+    const t = m.tex[x + m.W * y], tw = T[t].w;
+    const tile = first[t] + ((x >> 1) % tw) + tw * ((y >> 1) % tw);
+    ndx[x + m.W * y] = (tile << 2) + 2 * (y & 1) + (x & 1);
+  }
+  w.open('BlendTileData', 8);
+  w.i32(ds);
+  w.bytes(new Uint8Array(ndx.buffer));
+  w.bytes(new Uint8Array(ds * 2 * 3)); // blend, extra blend, cliff info: none
+  w.bytes(new Uint8Array(m.H * ((m.W + 7) >> 3))); // cell cliff state
+  w.i32(tiles); w.i32(1); w.i32(1);
+  w.i32(classes.length);
+  for (const t of classes) { w.i32(first[t]); w.i32(T[t].w * T[t].w); w.i32(T[t].w); w.i32(0); w.ascii(T[t].n); }
+  w.i32(0); w.i32(0); // no edge tiles
+  w.close();
+}
+
+function writeObjects(w, m) {
+  w.open('ObjectsList', 3);
+  for (const o of m.objects) {
+    w.open('Object', 3);
+    w.f32(o.x); w.f32(o.y); w.f32(o.z); w.f32(o.angle); w.i32(o.flags); w.ascii(o.name);
+    w.dict(o.dict);
+    w.close();
+  }
+  w.close();
+}
+
+const SKIRMISH = ['America', 'China', 'GLA', 'AmericaAirForceGeneral', 'AmericaLaserGeneral', 'AmericaSuperWeaponGeneral',
+  'ChinaTankGeneral', 'ChinaNukeGeneral', 'ChinaInfantryGeneral', 'GLADemolitionGeneral', 'GLAToxinGeneral', 'GLAStealthGeneral'];
+
+function writeSides(w) {
+  const sides = [['', 'Neutral', ''], ['PlyrCivilian', 'PlyrCivilian', 'FactionCivilian']]
+    .concat(SKIRMISH.map(s => ['Skirmish' + s, 'Skirmish' + s, 'Faction' + s]));
+  w.open('SidesList', 3);
+  w.i32(sides.length);
+  for (const [pn, dn, fac] of sides) {
+    w.dict([['playerName', DICT_ASCII, pn], ['playerIsHuman', DICT_BOOL, false], ['playerDisplayName', DICT_UNI, dn],
+      ['playerFaction', DICT_ASCII, fac], ['playerAllies', DICT_ASCII, ''], ['playerEnemies', DICT_ASCII, '']]);
+    w.i32(0); // build list
+  }
+  w.i32(sides.length);
+  for (const [pn] of sides) w.dict([['teamName', DICT_ASCII, 'team' + pn], ['teamOwner', DICT_ASCII, pn], ['teamIsSingleton', DICT_BOOL, true]]);
+  w.open('PlayerScriptsList', 5);
+  for (let k = 0; k < sides.length; k++) { w.open('ScriptList', 1); w.close(); }
+  w.close();
+  w.close();
+}
+
+function buildMapFile(m) {
+  const toc = m.toc ? { map: new Map(m.toc.map), next: m.toc.next } : { map: new Map(), next: 1 };
+  const w = new Writer(toc);
+  if (m.chunks) {
+    for (const c of m.chunks) {
+      if (c.kind === 'height') writeHeight(w, m);
+      else if (c.kind === 'blend') { if (m.texDirty || !m.blendRaw) writeBlend(w, m); else w.bytes(m.blendRaw); }
+      else if (c.kind === 'objects') writeObjects(w, m);
+      else w.bytes(c.raw);
+    }
+    if (!m.chunks.some(c => c.kind === 'objects')) writeObjects(w, m);
+  } else {
+    writeHeight(w, m);
+    writeBlend(w, m);
+    w.open('WorldInfo', 1); w.dict([['weather', DICT_INT, 0]]); w.close();
+    writeSides(w);
+    writeObjects(w, m);
+    w.open('PolygonTriggers', 4); w.i32(0); w.close();
+    w.open('GlobalLighting', 3); w.bytes(b64ToBytes(LIGHT_B64)); w.close();
+    w.open('WaypointsList', 1); w.i32(0); w.close();
+  }
+  return w.finish();
+}
+
+// ---- Objects ----
+function objectDict(name, uid) {
+  return [['objectInitialHealth', DICT_INT, 100], ['objectEnabled', DICT_BOOL, true], ['objectIndestructible', DICT_BOOL, false],
+    ['objectUnsellable', DICT_BOOL, false], ['objectPowered', DICT_BOOL, true], ['objectRecruitableAI', DICT_BOOL, true],
+    ['objectTargetable', DICT_BOOL, false], ['originalOwner', DICT_ASCII, 'team'], ['uniqueID', DICT_ASCII, uid], ['objectLayer', DICT_ASCII, '']];
+}
+
+function dictGet(o, key) { const e = o.dict.find(e => e[0] === key); return e ? e[2] : undefined; }
+
+function nextWaypointId(m) {
+  let id = 0; for (const o of m.objects) { const v = dictGet(o, 'waypointID'); if (typeof v === 'number') id = Math.max(id, v); }
+  return id + 1;
+}
+
+function makeObject(m, name, x, y, angle) {
+  if (/^Player_\d_Start$/.test(name)) {
+    const id = nextWaypointId(m);
+    return { x, y, z: 0, angle: 0, flags: 0, name: '*Waypoints/Waypoint', dict: [
+      ['objectInitialHealth', DICT_INT, 100], ['objectEnabled', DICT_BOOL, true], ['objectPowered', DICT_BOOL, true],
+      ['objectRecruitableAI', DICT_BOOL, true], ['originalOwner', DICT_ASCII, 'team'], ['uniqueID', DICT_ASCII, name],
+      ['objectLayer', DICT_ASCII, ''], ['waypointID', DICT_INT, id], ['objectSelectable', DICT_BOOL, false],
+      ['waypointName', DICT_ASCII, name], ['objectDestructible', DICT_BOOL, true], ['objectSellable', DICT_BOOL, true],
+      ['objectRepairable', DICT_BOOL, true]] };
+  }
+  m.uidCounter = (m.uidCounter || m.objects.length) + 1;
+  return { x, y, z: 0, angle: angle || 0, flags: 0, name, dict: objectDict(name, name + ' ' + m.uidCounter) };
+}
+
+// ---- Zip (stored) so the viewer can save the map folder ----
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(a) { let c = 0xffffffff; for (let i = 0; i < a.length; i++) c = CRC_TABLE[(c ^ a[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  for (const f of files) {
+    const nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true); lh.setUint16(26, nm.length, true);
+    parts.push(new Uint8Array(lh.buffer), nm, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true); ch.setUint16(28, nm.length, true);
+    ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), nm);
+    off += 30 + nm.length + sz;
+  }
+  const csz = central.reduce((s, p) => s + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, csz, true); end.setUint32(16, off, true);
+  const all = [...parts, ...central, new Uint8Array(end.buffer)];
+  const out = new Uint8Array(all.reduce((s, p) => s + p.length, 0)); let o = 0;
+  for (const p of all) { out.set(p, o); o += p.length; }
+  return out;
+}
+
+if (typeof module !== 'undefined') module.exports = { T, T_INDEX, newMap, parseMap, buildMapFile, makeObject, makeZip, usedClasses, refpack };
+
+</script>
+<script>
+const $ = s => document.querySelector(s);
+const cv = $('#cv'), ctx = cv.getContext('2d');
+const CLASS_GROUPS = [
+  ['desert', 'صحراء', ['Desert_1', 'Desert_2', 'DESERT_1', 'DESERT_DRY']],
+  ['grass', 'عشب وحقول', ['GRASS_COBBLESTONE', 'GRASS_ACCENT', 'FIELD']],
+  ['sand', 'رمل وشواطئ', ['BEACH_TROPICAL', 'BEACH_PARK', 'SAND_ACCENT']],
+  ['rock', 'جبال وصخور', ['MOUNTAIN_RUGGED', 'ROCK_ACCENT']],
+  ['snow', 'ثلج', ['SNOW_FLAT', 'SNOW_RUGGED']],
+  ['city', 'طرق ومدن', ['RESIDENTIAL', 'CONCRETE', 'ASPHALT']],
+  ['trans', 'انتقالية', ['TRANSITION']],
+  ['other', 'أخرى', ['OTHER']],
+];
+const OBJ_GROUPS = [
+  ['start', 'نقاط البداية', [1, 2, 3, 4, 5, 6, 7, 8].map(n => ['Player_' + n + '_Start', 'لاعب ' + n])],
+  ['res', 'موارد', [['SupplyDock', 'مخزن إمداد كبير'], ['SupplyPile', 'كومة إمداد'], ['SupplyPileSmall', 'كومة صغيرة']]],
+  ['tech', 'مباني تقنية', [['TechOilDerrick', 'بئر نفط'], ['TechHospital', 'مستشفى'], ['TechRepairbay', 'ورشة تصليح'],
+    ['TechReinforcementPad', 'منصة تعزيزات'], ['TechArtilleryPlatform', 'منصة مدفعية'], ['TechOilRefinery', 'مصفاة نفط']]],
+  ['tree', 'أشجار', [['TreePalm1', 'نخلة'], ['TreePalm2', 'نخلة ٢'], ['TreePalm1short', 'نخلة قصيرة'], ['TreeOak01', 'بلوط'],
+    ['TreePine', 'صنوبر'], ['TreeFir01', 'شوح'], ['TreeBirch01', 'بتولا'], ['TreeWillow01', 'صفصاف'], ['TreeCypress01', 'سرو'], ['TreeDogwood1', 'قرانيا']]],
+  ['rock', 'صخور ونبات', [['Rocks1', 'صخرة'], ['Rocks2', 'صخرة ٢'], ['Rocks2Brown', 'صخرة بنية'], ['RockClusterMedium01', 'كتلة صخور'],
+    ['RockClusterLarge01', 'كتلة كبيرة'], ['Bush01', 'شجيرة'], ['DesertShrub06', 'شجيرة صحراوية']]],
+];
+const PLAYER_COLORS = ['#e3a72f', '#d65a3c', '#4f9ad8', '#8fbf5a', '#c86fd0', '#e8e4d4', '#3fc3b4', '#e07fa0'];
+const ICONS = {
+  pan: '<path d="M8 12V6a1.5 1.5 0 0 1 3 0v5m0-6.5a1.5 1.5 0 0 1 3 0V11m0-4a1.5 1.5 0 0 1 3 0v6c0 4-2.5 7-6 7s-5-1.5-7-5l-1.5-3a1.4 1.4 0 0 1 2.4-1.4L8 13"/>',
+  raise: '<path d="M3 19h18M6 19l6-11 6 11M12 3v4M10 5l2-2 2 2"/>',
+  lower: '<path d="M3 5h18M6 5l6 11 6-11M12 21v-4M10 19l2 2 2-2"/>',
+  smooth: '<path d="M3 15c3-5 5-5 9 0s6 5 9 0M3 9c3-3 5-3 9 0s6 3 9 0"/>',
+  flat: '<path d="M3 14h18M5 14l3-5h8l3 5M7 18h10"/>',
+  paint: '<path d="M14 4l6 6-8.5 8.5a3 3 0 0 1-4.2 0l-1.8-1.8a3 3 0 0 1 0-4.2zM4 20c1.5 0 3-1 3-3"/>',
+  obj: '<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-3 3m3-3 3 3M12 21l-3-3m3 3 3-3M3 12l3-3m-3 3 3 3M21 12l-3-3m3 3-3 3"/>',
+  erase: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+};
+const TOOLS = [['pan', 'تحريك'], ['raise', 'رفع'], ['lower', 'خفض'], ['smooth', 'تنعيم'], ['flat', 'تسوية'], ['paint', 'دهان'], ['obj', 'كائنات'], ['move', 'نقل'], ['erase', 'حذف']];
+
+const S = {
+  tool: 'raise', size: 6, strength: 6, sym: 'none',
+  texGroup: 'desert', texSearch: '', paintTex: T_INDEX.get('SandMediumType11') ?? 0,
+  objGroup: 'start', objName: 'Player_1_Start', customObj: '',
+};
+let M = null; // current map
+let view = { s: 2, ox: 0, oy: 0 };
+let img = null, imgData = null, off = null;
+let undoStack = [];
+let classCount = null;
+
+// ---------- persistence (per-viewer convenience only) ----------
+function prefsSave() { try { localStorage.setItem('zhme.prefs', JSON.stringify({ size: S.size, strength: S.strength, sym: S.sym, paintTex: T[S.paintTex]?.n, texGroup: S.texGroup })); } catch (e) {} }
+function prefsLoad() {
+  try {
+    const p = JSON.parse(localStorage.getItem('zhme.prefs') || 'null'); if (!p) return;
+    Object.assign(S, { size: p.size ?? S.size, strength: p.strength ?? S.strength, sym: p.sym ?? S.sym, texGroup: p.texGroup ?? S.texGroup });
+    if (p.paintTex && T_INDEX.has(p.paintTex)) S.paintTex = T_INDEX.get(p.paintTex);
+  } catch (e) {}
+}
+function u8ToB64(a) { let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
+let saveTimer = 0;
+function draftSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem('zhme.draft', u8ToB64(buildMapFile(M))); localStorage.setItem('zhme.draftName', M.name); }
+    catch (e) { try { localStorage.removeItem('zhme.draft'); } catch (e2) {} }
+  }, 800);
+}
+function draftLoad() {
+  try {
+    const b = localStorage.getItem('zhme.draft'); if (!b) return null;
+    const m = parseMap(b64ToBytes(b).buffer); m.name = localStorage.getItem('zhme.draftName') || 'MyMap'; return m;
+  } catch (e) { return null; }
+}
+
+// ---------- rendering ----------
+function setMap(m) {
+  M = m; undoStack = [];
+  off = document.createElement('canvas'); off.width = M.W; off.height = M.H;
+  img = off.getContext('2d'); imgData = img.createImageData(M.W, M.H);
+  recountClasses();
+  renderRect(0, 0, M.W - 1, M.H - 1);
+  $('#mapName').value = M.name;
+  fit(); updatePanel(); draw();
+}
+function recountClasses() {
+  classCount = new Int32Array(T.length);
+  for (let k = 0; k < M.tex.length; k++) classCount[M.tex[k]]++;
+}
+function distinctClasses() { let n = 0; for (let k = 0; k < classCount.length; k++) if (classCount[k]) n++; return n; }
+
+function renderRect(x0, y0, x1, y1) {
+  const { W, H, heights: h, tex } = M, d = imgData.data;
+  x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(W - 1, x1); y1 = Math.min(H - 1, y1);
+  const [bw, bh] = M.boundaries[0] || [W - 2 * M.border, H - 2 * M.border];
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const k = x + W * y, t = T[tex[k]];
+      const dx = h[Math.min(W - 1, x + 1) + W * y] - h[Math.max(0, x - 1) + W * y];
+      const dy = h[x + W * Math.min(H - 1, y + 1)] - h[x + W * Math.max(0, y - 1)];
+      let s = 1 + 0.05 * (dx - dy);
+      s = Math.max(0.35, Math.min(1.6, s)) * (0.82 + h[k] / 255 * 0.45);
+      const tw = t.w, tile = ((x >> 1) % tw) + tw * ((y >> 1) % tw);
+      s *= 0.95 + ((tile * 2654435761 >>> 0) % 11) / 100;
+      const inside = x >= M.border && y >= M.border && x < M.border + bw && y < M.border + bh;
+      if (!inside) s *= 0.45;
+      const sy = H - 1 - y, o = 4 * (x + W * sy);
+      d[o] = Math.min(255, t.r * s); d[o + 1] = Math.min(255, t.g * s); d[o + 2] = Math.min(255, t.b * s); d[o + 3] = 255;
+    }
+  }
+  img.putImageData(imgData, 0, 0, x0, H - 1 - y1, x1 - x0 + 1, y1 - y0 + 1);
+}
+
+function resize() {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!view.fitted) fit();
+  draw();
+}
+function fit() {
+  const r = cv.getBoundingClientRect(); if (!M || !r.width) return;
+  view.fitted = true;
+  view.s = Math.min(r.width / M.W, r.height / M.H) * 0.96;
+  view.ox = (r.width - M.W * view.s) / 2; view.oy = (r.height - M.H * view.s) / 2;
+}
+// grid coordinate (x right, y north) <-> screen
+const toScreen = (gx, gy) => [view.ox + gx * view.s, view.oy + (M.H - gy) * view.s];
+const toGrid = (sx, sy) => [(sx - view.ox) / view.s, M.H - (sy - view.oy) / view.s];
+const worldToGrid = (x, y) => [x / 10 + M.border, y / 10 + M.border];
+const gridToWorld = (gx, gy) => [(gx - M.border) * 10, (gy - M.border) * 10];
+
+let cursor = null, raf = 0;
+function draw() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawNow(); }); }
+function drawNow() {
+  if (!M) return;
+  const r = cv.getBoundingClientRect();
+  ctx.clearRect(0, 0, r.width, r.height);
+  ctx.imageSmoothingEnabled = view.s < 3;
+  ctx.drawImage(off, view.ox, view.oy, M.W * view.s, M.H * view.s);
+  // playable boundary
+  const [bw, bh] = M.boundaries[0];
+  const [ax, ay] = toScreen(M.border, M.border + bh);
+  ctx.strokeStyle = 'rgba(227,167,47,.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+  ctx.strokeRect(ax, ay, bw * view.s, bh * view.s); ctx.setLineDash([]);
+  // symmetry guides
+  if (S.sym !== 'none') {
+    ctx.strokeStyle = 'rgba(232,228,212,.25)'; ctx.lineWidth = 1;
+    const [cx, cy] = toScreen(M.W / 2, M.H / 2);
+    ctx.beginPath();
+    if (S.sym === 'x' || S.sym === 'rot') { ctx.moveTo(cx, view.oy); ctx.lineTo(cx, view.oy + M.H * view.s); }
+    if (S.sym === 'y' || S.sym === 'rot') { ctx.moveTo(view.ox, cy); ctx.lineTo(view.ox + M.W * view.s, cy); }
+    ctx.stroke();
+  }
+  // objects
+  const rad = Math.max(3, Math.min(9, view.s * 1.6));
+  for (const o of M.objects) {
+    const [gx, gy] = worldToGrid(o.x, o.y), [sx, sy] = toScreen(gx, gy);
+    if (sx < -20 || sy < -20 || sx > r.width + 20 || sy > r.height + 20) continue;
+    const wp = o.name === '*Waypoints/Waypoint' ? dictGet(o, 'waypointName') || '' : '';
+    const pm = /^Player_(\d)_Start$/.exec(wp);
+    if (pm) {
+      const n = +pm[1];
+      ctx.fillStyle = PLAYER_COLORS[(n - 1) % 8]; ctx.strokeStyle = '#11130f'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx, sy, rad + 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#11130f'; ctx.font = `700 ${Math.round(rad + 5)}px ${getComputedStyle(document.body).getPropertyValue('--f-mono')}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n, sx, sy + 1);
+      continue;
+    }
+    let col = '#b9b8a4', shape = 'dot';
+    if (o.name === '*Waypoints/Waypoint') { col = '#6fb3d9'; shape = 'diamond'; }
+    else if (/^Supply/.test(o.name)) { col = '#e3c13a'; shape = 'square'; }
+    else if (/^Tech/.test(o.name)) { col = '#e0743a'; shape = 'square'; }
+    else if (/^Tree|Bush|Shrub/.test(o.name)) { col = '#5e9c45'; }
+    else if (/^Rock/.test(o.name)) { col = '#8c8778'; }
+    else if (/^Amb_/.test(o.name)) { col = 'rgba(160,160,200,.5)'; }
+    ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const q = shape === 'dot' ? rad * 0.7 : rad;
+    if (shape === 'square') ctx.rect(sx - q, sy - q, 2 * q, 2 * q);
+    else if (shape === 'diamond') { ctx.moveTo(sx, sy - q); ctx.lineTo(sx + q, sy); ctx.lineTo(sx, sy + q); ctx.lineTo(sx - q, sy); ctx.closePath(); }
+    else ctx.arc(sx, sy, q, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+  // brush
+  if (cursor && S.tool !== 'pan') {
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.2;
+    for (const [gx, gy] of symPoints(cursor[0], cursor[1])) {
+      const [sx, sy] = toScreen(gx, gy);
+      const rr = (S.tool === 'obj' || S.tool === 'move' || S.tool === 'erase') ? Math.max(10, 2.5 * view.s) : S.size * view.s;
+      ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+}
+
+// ---------- editing ----------
+function symPoints(gx, gy) {
+  const pts = [[gx, gy]], W = M.W, H = M.H;
+  if (S.sym === 'x') pts.push([W - 1 - gx, gy]);
+  else if (S.sym === 'y') pts.push([gx, H - 1 - gy]);
+  else if (S.sym === 'rot') pts.push([W - 1 - gx, H - 1 - gy]);
+  else if (S.sym === 'quad') pts.push([W - 1 - gx, gy], [gx, H - 1 - gy], [W - 1 - gx, H - 1 - gy]);
+  return pts;
+}
+function pushUndo() {
+  undoStack.push({ h: M.heights.slice(), t: M.tex.slice(), o: JSON.stringify(M.objects), d: M.texDirty });
+  if (undoStack.length > 15) undoStack.shift();
+  $('#bUndo').disabled = false;
+}
+function undo() {
+  const u = undoStack.pop(); if (!u) return;
+  M.heights.set(u.h); M.tex.set(u.t); M.objects = JSON.parse(u.o); M.texDirty = u.d;
+  recountClasses(); renderRect(0, 0, M.W - 1, M.H - 1); updateMeter(); draw(); draftSave();
+  $('#bUndo').disabled = !undoStack.length;
+}
+
+let flatTarget = 0;
+function applyBrush(gx, gy) {
+  const R = S.size, st = S.strength, W = M.W, H = M.H, h = M.heights;
+  let bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1;
+  for (const [px, py] of symPoints(gx, gy)) {
+    const cx = Math.round(px), cy = Math.round(py);
+    const x0 = Math.max(0, cx - R), x1 = Math.min(W - 1, cx + R), y0 = Math.max(0, cy - R), y1 = Math.min(H - 1, cy + R);
+    if (x0 > x1 || y0 > y1) continue;
+    bx0 = Math.min(bx0, x0); by0 = Math.min(by0, y0); bx1 = Math.max(bx1, x1); by1 = Math.max(by1, y1);
+    if (S.tool === 'paint') {
+      const t = S.paintTex;
+      if (!classCount[t] && distinctClasses() >= MAX_CLASSES) { toast('وصلت للحد: ١٦ نوع أرضية بالخريطة. استخدم نوع موجود أو امسح واحد.'); return; }
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        if ((x - px) ** 2 + (y - py) ** 2 > R * R) continue;
+        const k = x + W * y; if (M.tex[k] === t) continue;
+        classCount[M.tex[k]]--; classCount[t]++; M.tex[k] = t;
+      }
+      M.texDirty = true;
+      continue;
+    }
+    const src = S.tool === 'smooth' ? h.slice() : null;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const d2 = (x - px) ** 2 + (y - py) ** 2; if (d2 > R * R) continue;
+      const f = 1 - Math.sqrt(d2) / (R + 0.5), k = x + W * y;
+      const fall = f * f * (3 - 2 * f);
+      let v = h[k];
+      if (S.tool === 'raise') v += st * 0.5 * fall;
+      else if (S.tool === 'lower') v -= st * 0.5 * fall;
+      else if (S.tool === 'flat') v += (flatTarget - v) * Math.min(1, st * 0.06 * (0.3 + fall));
+      else if (S.tool === 'smooth') {
+        let sum = 0, n = 0;
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const xx = x + i, yy = y + j; if (xx >= 0 && yy >= 0 && xx < W && yy < H) { sum += src[xx + W * yy]; n++; } }
+        v += (sum / n - v) * Math.min(1, st * 0.08 * (0.3 + fall));
+      }
+      h[k] = Math.max(0, Math.min(255, Math.round(v + (Math.random() - 0.5) * 0.0)));
+    }
+  }
+  if (bx1 >= 0) renderRect(bx0 - 1, by0 - 1, bx1 + 1, by1 + 1);
+}
+
+function nearestObject(gx, gy, maxCells) {
+  let best = -1, bd = maxCells * maxCells;
+  M.objects.forEach((o, i) => { const [ox, oy] = worldToGrid(o.x, o.y); const d = (ox - gx) ** 2 + (oy - gy) ** 2; if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+function placeObject(gx, gy) {
+  const name = S.objName === '__custom' ? S.customObj.trim() : S.objName;
+  if (!name) { toast('اكتب اسم الكائن أول'); return; }
+  const pts = /^Player_\d_Start$/.test(name) ? [[gx, gy]] : symPoints(gx, gy);
+  for (const [px, py] of pts) {
+    if (px < 0 || py < 0 || px >= M.W || py >= M.H) continue;
+    if (/^Player_\d_Start$/.test(name)) M.objects = M.objects.filter(o => dictGet(o, 'waypointName') !== name);
+    const [wx, wy] = gridToWorld(px, py);
+    M.objects.push(makeObject(M, name, wx, wy, /^Tree|Rock|Bush|Shrub/.test(name) ? Math.random() * Math.PI * 2 : 0));
+  }
+  const pm = /^Player_(\d)_Start$/.exec(name);
+  if (pm && +pm[1] < 8) { S.objName = 'Player_' + (+pm[1] + 1) + '_Start'; updatePanel(); }
+}
+
+// ---------- input ----------
+const pointers = new Map();
+let gesture = null, stroke = null, holdTimer = 0;
+cv.addEventListener('pointerdown', e => {
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  pointers.set(e.pointerId, [e.offsetX, e.offsetY]);
+  if (pointers.size === 2) { endStroke(true); startGesture(); return; }
+  if (pointers.size > 2) return;
+  const [gx, gy] = toGrid(e.offsetX, e.offsetY);
+  cursor = [gx, gy];
+  if (S.tool === 'pan') { gesture = { pan: true, last: [e.offsetX, e.offsetY] }; return; }
+  stroke = { pending: true, x: gx, y: gy, sx: e.offsetX, sy: e.offsetY };
+  // wait briefly so a second finger can turn this into a pinch without editing
+  holdTimer = setTimeout(beginStroke, 70);
+  draw();
+});
+function beginStroke() {
+  if (!stroke || !stroke.pending) return;
+  stroke.pending = false; pushUndo();
+  const { x: gx, y: gy } = stroke;
+  if (S.tool === 'obj') { placeObject(gx, gy); stroke.done = true; }
+  else if (S.tool === 'erase') { const i = nearestObject(gx, gy, Math.max(3, 14 / view.s)); if (i >= 0) M.objects.splice(i, 1); else { undoStack.pop(); } stroke.done = true; }
+  else if (S.tool === 'move') { stroke.obj = nearestObject(gx, gy, Math.max(3, 14 / view.s)); if (stroke.obj < 0) { undoStack.pop(); stroke.done = true; } }
+  else {
+    if (S.tool === 'flat') flatTarget = M.heights[Math.round(gx) + M.W * Math.round(gy)] ?? 16;
+    applyBrush(gx, gy);
+    stroke.timer = setInterval(() => { if (stroke && cursor && (S.tool === 'raise' || S.tool === 'lower' || S.tool === 'smooth' || S.tool === 'flat')) { applyBrush(cursor[0], cursor[1]); draw(); } }, 60);
+  }
+  draw();
+}
+cv.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId)) { if (e.pointerType === 'mouse' && M) { cursor = toGrid(e.offsetX, e.offsetY); showHud(); draw(); } return; }
+  pointers.set(e.pointerId, [e.offsetX, e.offsetY]);
+  if (gesture && gesture.pinch) { moveGesture(); return; }
+  if (gesture && gesture.pan) { view.ox += e.offsetX - gesture.last[0]; view.oy += e.offsetY - gesture.last[1]; gesture.last = [e.offsetX, e.offsetY]; draw(); return; }
+  cursor = toGrid(e.offsetX, e.offsetY); showHud();
+  if (stroke && stroke.pending && Math.hypot(e.offsetX - stroke.sx, e.offsetY - stroke.sy) > 6) { clearTimeout(holdTimer); beginStroke(); }
+  if (stroke && !stroke.pending && !stroke.done) {
+    if (S.tool === 'move' && stroke.obj >= 0) { const [wx, wy] = gridToWorld(cursor[0], cursor[1]); M.objects[stroke.obj].x = wx; M.objects[stroke.obj].y = wy; }
+    else if (S.tool === 'paint') applyBrush(cursor[0], cursor[1]);
+  }
+  draw();
+});
+function endStroke(cancel) {
+  clearTimeout(holdTimer);
+  if (stroke) {
+    clearInterval(stroke.timer);
+    if (stroke.pending && !cancel) beginStroke();
+    if (!stroke.pending) { if (S.tool === 'paint') updateMeter(); draftSave(); }
+    if (stroke) clearInterval(stroke.timer);
+  }
+  stroke = null;
+}
+const up = e => {
+  pointers.delete(e.pointerId);
+  if (gesture && gesture.pinch) { if (pointers.size < 2) gesture = null; return; }
+  gesture = null; endStroke(false);
+  if (e.pointerType !== 'mouse') cursor = null;
+  draw();
+};
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pointers.size) { cursor = null; draw(); } });
+function startGesture() {
+  const [a, b] = [...pointers.values()];
+  gesture = { pinch: true, d: Math.hypot(a[0] - b[0], a[1] - b[1]), c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], s: view.s, ox: view.ox, oy: view.oy };
+  cursor = null;
+}
+function moveGesture() {
+  const [a, b] = [...pointers.values()], g = gesture;
+  const d = Math.hypot(a[0] - b[0], a[1] - b[1]), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const ns = Math.max(0.3, Math.min(40, g.s * d / g.d));
+  view.s = ns;
+  view.ox = c[0] - (g.c[0] - g.ox) * ns / g.s; view.oy = c[1] - (g.c[1] - g.oy) * ns / g.s;
+  draw();
+}
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * 0.0015), ns = Math.max(0.3, Math.min(40, view.s * f));
+  view.ox = e.offsetX - (e.offsetX - view.ox) * ns / view.s; view.oy = e.offsetY - (e.offsetY - view.oy) * ns / view.s; view.s = ns; draw();
+}, { passive: false });
+
+function showHud() {
+  if (!cursor || !M) return;
+  const x = Math.round(cursor[0]), y = Math.round(cursor[1]);
+  const inMap = x >= 0 && y >= 0 && x < M.W && y < M.H;
+  $('#hud').textContent = inMap ? `x ${x - M.border}  y ${y - M.border}  h ${M.heights[x + M.W * y]}  · ${T[M.tex[x + M.W * y]].n}` : '';
+}
+
+// ---------- UI ----------
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 3200); }
+function buildTools() {
+  $('#tools').innerHTML = TOOLS.map(([id, label]) => `<button class="tool${S.tool === id ? ' on' : ''}" data-tool="${id}"><svg viewBox="0 0 24 24">${ICONS[id]}</svg>${label}</button>`).join('');
+}
+$('#tools').addEventListener('click', e => {
+  const b = e.target.closest('[data-tool]'); if (!b) return;
+  S.tool = b.dataset.tool; buildTools(); updatePanel(); draw();
+});
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function symSeg() {
+  const opts = [['none', 'بدون'], ['x', 'يمين/يسار'], ['y', 'فوق/تحت'], ['rot', 'دوران'], ['quad', '٤ أرباع']];
+  return `<div class="row"><label>تناظر</label><div class="seg" id="symSeg">${opts.map(([v, l]) => `<button data-sym="${v}" class="${S.sym === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>`;
+}
+function sliders(withStrength) {
+  return `<div class="row"><label>الحجم</label><input id="sSize" type="range" min="1" max="40" value="${S.size}"><span class="val" id="vSize">${S.size}</span></div>` +
+    (withStrength ? `<div class="row"><label>القوة</label><input id="sStr" type="range" min="1" max="20" value="${S.strength}"><span class="val" id="vStr">${S.strength}</span></div>` : '');
+}
+function updateMeter() {
+  const el = $('#meter'); if (!el || !classCount) return;
+  const n = distinctClasses(); el.textContent = `${n}/${MAX_CLASSES} textures`; el.classList.toggle('warn', n >= MAX_CLASSES);
+}
+function texGrid() {
+  const g = CLASS_GROUPS.find(g => g[0] === S.texGroup) || CLASS_GROUPS[0];
+  const q = S.texSearch.trim().toLowerCase();
+  const list = T.map((t, i) => [t, i]).filter(([t]) => q ? t.n.toLowerCase().includes(q) : g[2].includes(t.c));
+  return list.map(([t, i]) => `<button class="sw${i === S.paintTex ? ' on' : ''}" data-tex="${i}" title="${esc(t.n)}"><i style="background:rgb(${t.r},${t.g},${t.b})"></i><span>${esc(t.n)}</span></button>`).join('') || '<p class="hint">ما في نتائج.</p>';
+}
+function objGrid() {
+  const g = OBJ_GROUPS.find(g => g[0] === S.objGroup) || OBJ_GROUPS[0];
+  return g[2].map(([n, l]) => `<button class="ob${S.objName === n ? ' on' : ''}" data-obj="${n}"><b>${l}</b><small>${n}</small></button>`).join('');
+}
+function updatePanel() {
+  const p = $('#panel'), t = S.tool;
+  let h = '';
+  if (t === 'pan') h = `<p class="hint">اسحب بإصبع وحدة لتحريك الخريطة. بإصبعين تكبر وتصغر. زر ⤢ يرجع الخريطة كاملة للشاشة.</p>`;
+  else if (t === 'raise' || t === 'lower' || t === 'smooth' || t === 'flat') {
+    const hints = { raise: 'اضغط مطولاً أو اسحب لرفع الأرض وعمل تلال وجبال.', lower: 'اضغط مطولاً أو اسحب لحفر وديان ومنخفضات.', smooth: 'نعّم الحواف الحادة بين التلال.', flat: 'بيسوّي الأرض على ارتفاع النقطة اللي بدأت منها. مفيد لأماكن القواعد.' };
+    h = `<p class="hint">${hints[t]}</p>${sliders(true)}${symSeg()}`;
+  } else if (t === 'paint') {
+    const cur = T[S.paintTex];
+    h = `<div class="row"><span class="sw on" style="flex:1"><i style="background:rgb(${cur.r},${cur.g},${cur.b})"></i><span>${esc(cur.n)}</span></span><span class="meter" id="meter"></span></div>
+      ${sliders(false)}${symSeg()}
+      <div class="row"><input class="search" id="texSearch" placeholder="ابحث باسم الأرضية (مثلاً Grass)" value="${esc(S.texSearch)}" dir="auto"></div>
+      <div class="chips" id="texChips">${CLASS_GROUPS.filter(g => T.some(x => g[2].includes(x.c))).map(([id, l]) => `<button class="chip${S.texGroup === id && !S.texSearch ? ' on' : ''}" data-group="${id}">${l}</button>`).join('')}</div>
+      <div class="grid" id="texGrid">${texGrid()}</div>`;
+  } else if (t === 'obj') {
+    h = `<div class="chips" id="objChips">${OBJ_GROUPS.map(([id, l]) => `<button class="chip${S.objGroup === id ? ' on' : ''}" data-group="${id}">${l}</button>`).join('')}<button class="chip${S.objGroup === 'custom' ? ' on' : ''}" data-group="custom">اسم من اللعبة</button></div>
+      ${S.objGroup === 'custom'
+        ? `<div class="row"><input class="search" id="customObj" placeholder="مثلاً: AmericaTankCrusader" value="${esc(S.customObj)}" dir="ltr" spellcheck="false"></div><p class="hint">اكتب اسم أي Object من ملفات اللعبة. لو الاسم غلط، اللعبة بتتجاهله.</p>`
+        : `<div class="grid" id="objGrid">${objGrid()}</div>`}
+      ${S.objGroup === 'start' ? '<p class="hint">اضغط على الخريطة لوضع نقطة بداية اللاعب المختار. بعدها بينتقل تلقائياً للاعب اللي بعده.</p>' : symSeg()}`;
+  } else if (t === 'move') h = `<p class="hint">اسحب أي كائن أو نقطة بداية لمكان جديد.</p>`;
+  else if (t === 'erase') h = `<p class="hint">اضغط على كائن لحذفه. الكائنات بالخريطة: <b>${M ? M.objects.length : 0}</b></p>`;
+  p.innerHTML = h;
+  updateMeter();
+}
+$('#panel').addEventListener('input', e => {
+  if (e.target.id === 'sSize') { S.size = +e.target.value; $('#vSize').textContent = S.size; prefsSave(); }
+  if (e.target.id === 'sStr') { S.strength = +e.target.value; $('#vStr').textContent = S.strength; prefsSave(); }
+  if (e.target.id === 'texSearch') { S.texSearch = e.target.value; $('#texGrid').innerHTML = texGrid(); document.querySelectorAll('#texChips .chip').forEach(c => c.classList.toggle('on', !S.texSearch && c.dataset.group === S.texGroup)); }
+  if (e.target.id === 'customObj') { S.customObj = e.target.value; S.objName = '__custom'; }
+});
+$('#panel').addEventListener('click', e => {
+  const sym = e.target.closest('[data-sym]'); if (sym) { S.sym = sym.dataset.sym; prefsSave(); updatePanel(); draw(); return; }
+  const tex = e.target.closest('[data-tex]'); if (tex) { S.paintTex = +tex.dataset.tex; prefsSave(); updatePanel(); return; }
+  const ob = e.target.closest('[data-obj]'); if (ob) { S.objName = ob.dataset.obj; updatePanel(); return; }
+  const gr = e.target.closest('[data-group]');
+  if (gr) {
+    if (S.tool === 'paint') { S.texGroup = gr.dataset.group; S.texSearch = ''; prefsSave(); }
+    else { S.objGroup = gr.dataset.group; if (S.objGroup === 'custom') S.objName = '__custom'; else S.objName = OBJ_GROUPS.find(g => g[0] === S.objGroup)[2][0][0]; }
+    updatePanel();
+  }
+});
+
+// sheets
+function openSheet(id) { document.querySelectorAll('.sheet').forEach(s => s.hidden = true); $(id).hidden = false; }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-close]')) s.hidden = true; }));
+function fillNewForm() {
+  const sizes = [100, 150, 200, 250, 300, 350, 400];
+  $('#nW').innerHTML = $('#nH').innerHTML = sizes.map(s => `<option value="${s}"${s === 200 ? ' selected' : ''}>${s}</option>`).join('');
+  $('#nH').innerHTML = $('#nW').innerHTML;
+  $('#nTex').innerHTML = T.filter(t => t.c !== 'TRANSITION' && t.c !== 'OTHER').map(t => `<option value="${esc(t.n)}"${t.n === 'SandMediumType11' ? ' selected' : ''}>${esc(t.n)}</option>`).join('');
+}
+$('#bNew').onclick = () => openSheet('#sheetNew');
+$('#mNew').onclick = () => openSheet('#sheetNew');
+$('#bMenu').onclick = () => openSheet('#sheetMenu');
+$('#nGo').onclick = () => {
+  const name = cleanName($('#nName').value) || 'MyMap';
+  const h = Math.max(0, Math.min(200, +$('#nHeight').value || 16));
+  setMap(newMap(name, +$('#nW').value, +$('#nH').value, 30, h, T_INDEX.get($('#nTex').value) ?? 0));
+  $('#sheetNew').hidden = true; draftSave(); toast('خريطة جديدة جاهزة. ابدأ ارسم.');
+};
+function cleanName(s) { return s.replace(/[^A-Za-z0-9 _\-]/g, '').trim().slice(0, 40); }
+$('#mapName').addEventListener('change', e => { const n = cleanName(e.target.value); if (!n) { e.target.value = M.name; toast('الاسم لازم يكون بحروف إنجليزية أو أرقام'); return; } M.name = n; e.target.value = n; draftSave(); });
+
+// open
+const fileIn = $('#fileIn');
+$('#bOpen').onclick = $('#mOpen').onclick = () => { $('#sheetMenu').hidden = true; fileIn.click(); };
+fileIn.addEventListener('change', async () => {
+  const f = fileIn.files[0]; fileIn.value = ''; if (!f) return;
+  try {
+    const m = parseMap(await f.arrayBuffer());
+    m.name = cleanName(f.name.replace(/\.map$/i, '')) || 'MyMap';
+    setMap(m); draftSave();
+    toast(`انفتحت ${m.name}: ${m.W - 2 * m.border}×${m.H - 2 * m.border}، ${m.objects.length} كائن`);
+  } catch (err) { toast('ما قدرت أفتح الملف: ' + err.message); }
+});
+
+// save
+let downloads;
+async function getDownloads() {
+  if (downloads !== undefined) return downloads;
+  try { downloads = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { downloads = null; }
+  return downloads;
+}
+async function saveFile(asZip) {
+  const btn = $('#bSave'); btn.disabled = true;
+  try {
+    const bytes = buildMapFile(M), n = M.name;
+    const data = asZip ? makeZip([{ name: `${n}/${n}.map`, data: bytes }]) : bytes;
+    const filename = asZip ? `${n}.zip` : `${n}.map`;
+    if (window.AndroidApp) {
+      const res = window.AndroidApp.save(filename, u8ToB64(data));
+      if (res === 'ERR:perm') toast('اسمح للتطبيق يحفظ ملفات، وبعدين اضغط حفظ مرة ثانية');
+      else if (res.startsWith('ERR:')) toast('ما انحفظ الملف: ' + res.slice(4));
+      else toast('انحفظ في ' + res);
+      return;
+    }
+    const dl = await getDownloads();
+    if (dl) {
+      if (!asZip) { toast('ملف ‎.map مش مسموح يتنزل من هون. استخدم زر حفظ (zip)'); return; }
+      try { await dl.save({ filename, data: new Blob([data]) }); toast('انحفظت. فك الضغط وانقل المجلد لمجلد Maps.'); }
+      catch (err) { toast(err.code === 'declined' ? 'ألغيت الحفظ' : 'ما انحفظ الملف: ' + (err.message || err.code)); }
+    } else {
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/octet-stream' }));
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast('نزل الملف ' + filename);
+    }
+  } finally { btn.disabled = false; }
+}
+$('#bSave').onclick = () => saveFile(true);
+$('#mSaveMap').onclick = () => { $('#sheetMenu').hidden = true; saveFile(false); };
+$('#bUndo').onclick = undo;
+$('#bFit').onclick = () => { fit(); draw(); };
+
+// sample map so the editor opens in a working state
+function sampleMap() {
+  const sand = T_INDEX.get('SandMediumType11') ?? 0, grass = T_INDEX.get('GrassMediumType35') ?? sand, rock = T_INDEX.get('CliffLargeType10') ?? sand;
+  const m = newMap('MyMap', 200, 200, 30, 16, sand), W = m.W;
+  for (let y = 0; y < m.H; y++) for (let x = 0; x < W; x++) {
+    const k = x + W * y, dx = x - W / 2, dy = y - m.H / 2;
+    const ridge = Math.max(0, 1 - Math.abs(dx + dy) / 18) * (Math.hypot(dx, dy) > 30 ? 1 : 0.15);
+    const hgt = 16 + ridge * 70 + 6 * Math.sin(x / 13) * Math.cos(y / 17);
+    m.heights[k] = Math.max(0, Math.min(255, Math.round(hgt)));
+    if (ridge > 0.35) m.tex[k] = rock;
+    else if (Math.hypot(x - 70, y - 70) < 26 || Math.hypot(x - (W - 70), y - (m.H - 70)) < 26) m.tex[k] = grass;
+  }
+  m.objects.push(makeObject(m, 'Player_1_Start', 400, 400), makeObject(m, 'Player_2_Start', 1600, 1600),
+    makeObject(m, 'SupplyDock', 650, 300), makeObject(m, 'SupplyDock', 1350, 1700), makeObject(m, 'TechOilDerrick', 1000, 1000));
+  for (let i = 0; i < 14; i++) { const a = i * 2.4; m.objects.push(makeObject(m, 'TreePalm1', 300 + 180 * Math.cos(a) + i * 6, 900 + 160 * Math.sin(a), a)); }
+  return m;
+}
+
+prefsLoad(); buildTools(); fillNewForm();
+new ResizeObserver(() => { resize(); }).observe(cv);
+setMap(draftLoad() || sampleMap());
+$('#bUndo').disabled = true;
+</script>
+
+</body></html>
