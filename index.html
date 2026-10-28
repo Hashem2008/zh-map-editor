@@ -642,7 +642,20 @@ function setMap(m) {
   $('#mapName').value = M.name;
   fit(); updatePanel(); draw();
 }
+// cells covered by water areas whose surface is above the ground (what the game shows as water)
+function computeWater() {
+  const W = M.W, H = M.H, wz = new Float32Array(W * H).fill(-1e9); let any = false;
+  for (const p of M.polys || []) {
+    if (!p.water || p.pts.length < 3) continue; any = true;
+    const g = p.pts.map(([x, y]) => [x / 10 + M.border, y / 10 + M.border]), z = p.pts[0][2];
+    const x0 = Math.max(0, Math.floor(Math.min(...g.map(q => q[0])))), x1 = Math.min(W - 1, Math.ceil(Math.max(...g.map(q => q[0]))));
+    const y0 = Math.max(0, Math.floor(Math.min(...g.map(q => q[1])))), y1 = Math.min(H - 1, Math.ceil(Math.max(...g.map(q => q[1]))));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (z > wz[x + W * y] && inPoly(x, y, p)) wz[x + W * y] = z;
+  }
+  M.waterZ = any ? wz : null;
+}
 function recountClasses() {
+  computeWater();
   classCount = new Int32Array(T.length);
   for (let k = 0; k < M.tex.length; k++) classCount[M.tex[k]]++;
 }
@@ -664,7 +677,9 @@ function renderRect(x0, y0, x1, y1) {
       const inside = x >= M.border && y >= M.border && x < M.border + bw && y < M.border + bh;
       if (!inside) s *= 0.45;
       const sy = H - 1 - y, o = 4 * (x + W * sy);
-      d[o] = Math.min(255, t.r * s); d[o + 1] = Math.min(255, t.g * s); d[o + 2] = Math.min(255, t.b * s); d[o + 3] = 255;
+      let r = t.r * s, g = t.g * s, b = t.b * s;
+      if (M.waterZ && M.waterZ[k] > h[k] * 0.625) { r = r * 0.35 + 40; g = g * 0.35 + 95; b = b * 0.35 + 150; }
+      d[o] = Math.min(255, r); d[o + 1] = Math.min(255, g); d[o + 2] = Math.min(255, b); d[o + 3] = 255;
     }
   }
   img.putImageData(imgData, 0, 0, x0, H - 1 - y1, x1 - x0 + 1, y1 - y0 + 1);
@@ -749,7 +764,7 @@ function drawNow() {
   for (const pg of M.polys || []) {
     if (pg.pts.length < 2) continue;
     ctx.beginPath(); pg.pts.forEach(([x, y], i) => { const [sx, sy] = toScreen(x / 10 + M.border, y / 10 + M.border); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.closePath();
-    if (pg.water) { ctx.fillStyle = 'rgba(60,130,200,.45)'; ctx.fill(); ctx.strokeStyle = 'rgba(140,200,255,.9)'; ctx.lineWidth = 1.2; ctx.stroke(); }
+    if (pg.water) { ctx.strokeStyle = 'rgba(140,200,255,.35)'; ctx.lineWidth = 1; ctx.stroke(); }
     else { ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(232,228,212,.4)'; ctx.stroke(); ctx.setLineDash([]); }
   }
   if (S.tool === 'water' && S.wpts.length) {
@@ -893,7 +908,7 @@ function beginStroke() {
   else if (S.tool === 'erase') { const i = nearestObject(gx, gy, Math.max(3, 14 / view.s)); if (i >= 0) M.objects.splice(i, 1); else { undoStack.pop(); } stroke.done = true; }
   else if (S.tool === 'water') {
     if (S.wMode === 'draw') { undoStack.pop(); S.wpts.push([gx, gy]); stroke.done = true; updatePanel(); }
-    else { const i = (M.polys || []).findIndex(p => p.water && inPoly(gx, gy, p)); if (i >= 0) { M.polys.splice(i, 1); gen++; toast('انحذفت المي'); } else undoStack.pop(); stroke.done = true; }
+    else { const i = (M.polys || []).findIndex(p => p.water && inPoly(gx, gy, p)); if (i >= 0) { M.polys.splice(i, 1); gen++; computeWater(); renderRect(0, 0, M.W - 1, M.H - 1); toast('انحذفت المي'); } else undoStack.pop(); stroke.done = true; }
   }
   else if (S.tool === 'copy') {
     if (S.cpMode === 'select' || !S.clip) { undoStack.pop(); selRect = [gx, gy, gx, gy]; stroke.copy = 'sel'; }
@@ -1383,6 +1398,7 @@ window.onGameFolder = async () => { toast('بقرأ مجلد اللعبة…'); 
 if (window.AndroidApp && window.AndroidApp.listGameFiles) {
   const b = document.createElement('button'); b.className = 'btn primary'; b.textContent = 'اختار مجلد اللعبة (أسهل)';
   b.onclick = () => window.AndroidApp.pickGameFolder(); $('#bPickBig').before(b); $('#bPickBig').classList.remove('primary');
+  if (window.AndroidApp.requestAllFiles) { const b2 = document.createElement('button'); b2.className = 'btn'; b2.textContent = 'بحث تلقائي بكل الهاتف'; b2.onclick = () => window.AndroidApp.requestAllFiles(); b.after(b2); }
   setTimeout(() => loadGameFolder(), 300);
 }
 $('#bigIn').addEventListener('change', async e => { const fs = [...e.target.files]; e.target.value = ''; if (!fs.length) return; toast('بقرأ الملفات…'); await useArchives(fs, true); toast('تم. افتح الـ 3D.'); });
@@ -1517,7 +1533,7 @@ $('#panel').addEventListener('click', e => {
       pushUndo(); M.polys = M.polys || [];
       const id = M.polys.reduce((m, p) => Math.max(m, p.id), 0) + 1, z = Math.round(S.wH * 0.625);
       M.polys.push({ name: 'Water Area ' + id, layer: '', id, water: true, river: false, riverStart: 0, pts: S.wpts.map(([x, y]) => [Math.round((x - M.border) * 10), Math.round((y - M.border) * 10), z]) });
-      S.wpts = []; draftSave(); toast('انضافت المي');
+      S.wpts = []; computeWater(); renderRect(0, 0, M.W - 1, M.H - 1); draftSave(); toast('انضافت المي');
     }
     updatePanel(); draw(); return;
   }
