@@ -118,7 +118,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     <canvas id="cv"></canvas>
     <div class="hud" id="hud"></div>
     <div class="v3" id="v3" hidden>
-      <div class="v3bar" id="v3bar"><span>3D · اسحب لتدوير</span><button id="v3size" aria-label="تكبير العرض">⇲</button><button id="v3close" aria-label="إغلاق">×</button></div>
+      <div class="v3bar" id="v3bar"><span id="v3stat">3D</span><button id="v3models" aria-label="تحميل موديلات اللعبة" style="width:auto;font-size:11px;padding:0 6px;color:var(--accent)">موديلات</button><button id="v3size" aria-label="تكبير العرض">⇲</button><button id="v3close" aria-label="إغلاق">×</button></div>
       <canvas id="v3c"></canvas>
     </div>
     <div class="fab">
@@ -171,6 +171,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 </div>
 
 <input type="file" id="fileIn" accept=".map" hidden>
+<input type="file" id="bigIn" accept=".big" multiple hidden>
+<div class="sheet" id="sheetModels" hidden>
+  <div class="card">
+    <h2>موديلات اللعبة بالـ 3D</h2>
+    <p>عشان تشوف المباني والإمدادات والأشجار بشكلها الحقيقي، اختار ملفات اللعبة من مجلد <code>Zero Hour</code>. المحرر بيقرأهم من جهازك بس، وما بيرفعهم لأي مكان.</p>
+    <ol>
+      <li><code>INIZH.big</code> (ضروري: فيه أسماء الموديلات)</li>
+      <li><code>W3DZH.big</code> (ضروري: فيه الأشكال)</li>
+      <li><code>W3D.big</code> من مجلد Generals الأصلي (مهم: فيه الإمدادات والصخور)</li>
+    </ol>
+    <p class="hint" id="modelsStat">ما في ملفات محملة.</p>
+    <div class="actions"><button class="btn primary" id="bPickBig">اختار الملفات</button><button class="btn" id="bClearBig">مسح</button><button class="btn" data-close>إغلاق</button></div>
+  </div>
+</div>
 
 <script>
 const TERRAINS=[["AsphaltType1","ASPHALT",2,"706e63"],["AsphaltType2","ASPHALT",2,"7a807d"],["AsphaltType3","ASPHALT",2,"666a67"],["BridgeAsphaltBlend","ASPHALT",1,"828387"],["ParkingLotType1a","ASPHALT",2,"747368"],["ParkingLotType1b","ASPHALT",2,"747368"],["ParkingLotType1c","ASPHALT",2,"747368"],["ParkingLotType1d","ASPHALT",2,"747368"],["SandMediumType5c","DESERT_DRY",4,"eec05f"],["Cobble02","DESERT_DRY",4,"9a8f73"],["SandType2wavy","DESERT_DRY",2,"aa9783"],["SandType2","DESERT_DRY",2,"b29d85"],["Cobble04","DESERT_DRY",10,"947a58"],["SandLargeType2","DESERT_DRY",6,"edcb81"],["SandLargeType3Light","DESERT_DRY",6,"eedb9e"],["RocksType6","DESERT_DRY",2,"a49478"],["SandMediumType7Light","DESERT_DRY",4,"e6d8a1"],["SandMediumType5","DESERT_DRY",4,"e6d29f"],["SandMediumType5b","DESERT_DRY",4,"d1b279"],["SandMediumType2","DESERT_DRY",4,"bda372"],["SandMediumType3","DESERT_DRY",4,"ceb17a"],["SandMediumType4","DESERT_DRY",4,"ead197"],["CliffMediumType24b","Desert_1",4,"bbad92"],["CliffMediumType5b","DESERT_1",4,"968666"],["CliffMediumType6b","Desert_1",4,"9a9679"],["CliffMediumType9b","Desert_1",4,"9e967c"],["CliffMediumType10b","Desert_1",4,"918873"],["CliffMediumType13b","Desert_1",4,"a49c82"],["CliffMediumType15","Desert_1",4,"84877b"],["CliffLargeType3","Desert_1",6,"6d6b47"],["CliffLargeType13","Desert_1",6,"9a9474"],["DirtMediumType8","Desert_1",4,"cdac76"],["DirtMediumType9","Desert_1",4,"c2ae89"],["DirtMediumType10","Desert_1",4,"c0a26b"],["DirtMediumType11","Desert_1",4,"ccb17d"],["GrassMediumType27olive","Desert_1",4,"8b8a57"],["GrassMediumType29","Desert_1",4,"c1a974"],["GrassMediumType36","Desert_1",4,"ab9159"],["RocksMediumType1","Desert_1",4,"c6a976"],["SandMediumType6","Desert_1",4,"ceb17a"],["SandMediumType7","Desert_1",4,"dbba81"],["SandMediumType7Rocky","Desert_1",4,"dabb86"],["SandMediumType7Grassy","Desert_1",4,"c3a86d"],["SandMediumType8","Desert_1",4,"bea975"],["SandMediumType10","Desert_1",4,"d2b379"],["SandMediumType10brown","Desert_1",4,"d4b375"],["SandMediumType12Grassy","Desert_1",4,"baa665"],["SandMediumType13b","Desert_1",4,"f7e6c3"],["SandMediumType13c","Desert_1",4,"f2e2be"],["SandMediumType13d","Desert_1",4,"e7d7b5"],["SandMediumType13grassy","Desert_1",4,"e3d4b4"],["SandMediumType14light","Desert_1",4,"fdf8d8"],["SandMediumType13grassy3","Desert_1",4,"e5d5ad"],["SandLargeType3","Desert_1",6,"dcb97c"],["SandLargeType3Grassy","Desert_1",6,"c4a86c"],["SandLargeType3Rocky1","Desert_1",6,"dab980"],["SandLargeType3Rocky2","Desert_1",6,"dbba7f"],["SandLargeType3Rocky3","Desert_1",6,"dcb97d"],["SandLargeType3Rocky&Grassy","Desert_1",6,"c4a96d"],["SandType4","Desert_1",2,"d6b77f"],["CliffMediumType19","Desert_2",4,"b79a66"],["CliffMediumType20","Desert_2",4,"bd9f72"],["CliffLargeType9","Desert_2",6,"ac9367"],["CliffLargeType10","Desert_2",4,"b69d6c"],["CliffLargeType11","Desert_2",10,"bc9e64"],["CliffLargeType12","Desert_2",10,"b19560"],["DirtMediumType12","Desert_2",4,"c7a05c"],["DirtMediumType13","Desert_2",2,"c89f55"],["GrassLargeType2","Desert_2",6,"94903a"],["GrassMediumType32","Desert_2",4,"ad9c4f"],["GrassMediumType34","Desert_2",4,"928d4a"],["GrassMediumType35","Desert_2",4,"cbb06a"],["RocksType6","Desert_2",2,"a49478"],["RocksType7","Desert_2",2,"a8a297"],["SandMediumType9","Desert_2",4,"d4a653"],["SandMediumType9blue","Desert_2",4,"5180b0"],["SandMediumType9blue2","Desert_2",4,"6f99ae"],["SandMediumType9blue3","Desert_2",4,"9db0b8"],["SandMediumType9blue4","Desert_2",4,"dde8ed"],["SandMediumType9b","Desert_2",4,"b89d68"],["SandMediumType11","Desert_2",4,"d0a64d"],["SandLargeType4Grassy","Desert_2",6,"c7a862"],["SandLargeType4","Desert_2",6,"d4a85f"],["SandType3","Desert_2",2,"c79c51"],["SandType3wet","Desert_2",2,"9c7a3f"],["SandType3wavy","Desert_2",2,"c89b4d"],["SandType6","Desert_2",4,"b79b47"],["SandToxicSpill1","SAND_ACCENT",2,"b27a5c"],["SandToxicSpill2","SAND_ACCENT",2,"b3a84f"],["SandToxicSpill3","SAND_ACCENT",2,"604138"],["SandLargeType3Grassy","SAND_ACCENT",6,"c4a86c"],["SandType1","SAND_ACCENT",2,"a98365"],["SandType1dark","SAND_ACCENT",2,"8d694d"],["SandType1darker","SAND_ACCENT",2,"76543b"],["SandLargeType2Grassy","SAND_ACCENT",6,"d2b56c"],["SandMediumType7GrassyLight","SAND_ACCENT",4,"dece98"],["SandMediumType5grassy","SAND_ACCENT",4,"d0c090"],["SandMediumType1","SAND_ACCENT",4,"9b988c"],["SandMediumType9blue","BEACH_TROPICAL",4,"5180b0"],["SandMediumType9blue2","BEACH_TROPICAL",4,"6f99ae"],["SandMediumType9blue3","BEACH_TROPICAL",4,"9db0b8"],["SandMediumType9blue4","BEACH_TROPICAL",4,"dde8ed"],["SandLargeType3Light","BEACH_TROPICAL",6,"eedb9e"],["SandMediumType13b","BEACH_TROPICAL",4,"f7e6c3"],["SandMediumType13c","BEACH_TROPICAL",4,"f2e2be"],["SandMediumType13d","BEACH_TROPICAL",4,"e7d7b5"],["SandMediumType13grassy2","BEACH_TROPICAL",4,"b7ab74"],["SandMediumType13grassy3","BEACH_TROPICAL",4,"e5d5ad"],["SandMediumType13grassy4","BEACH_TROPICAL",4,"dbce9d"],["SandMediumType13","BEACH_TROPICAL",4,"f7e7c4"],["SandMediumType6","BEACH_TROPICAL",4,"ceb17a"],["SandMediumType6Light","BEACH_TROPICAL",4,"e5d498"],["SandMediumType7Light","BEACH_TROPICAL",4,"e6d8a1"],["SandMediumType9b","BEACH_PARK",4,"b89d68"],["GrassMediumType13Light","BEACH_PARK",4,"889856"],["GrassMediumType22","BEACH_PARK",4,"7e854f"],["WoodBridgeBlend1","BEACH_PARK",1,"9f9787"],["WoodType1","BEACH_PARK",2,"928577"],["SandType4","BEACH_PARK",2,"d6b77f"],["SandMediumType6","BEACH_PARK",4,"ceb17a"],["DirtMediumType11","BEACH_PARK",4,"ccb17d"],["DirtMediumType3","BEACH_PARK",4,"b09e86"],["GrassMediumType13","BEACH_PARK",4,"697644"],["CliffLargeType3b","MOUNTAIN_RUGGED",6,"99966b"],["CliffMediumType4","MOUNTAIN_RUGGED",4,"848781"],["CliffMediumType6c","MOUNTAIN_RUGGED",4,"bab592"],["CliffMediumType6snow","MOUNTAIN_RUGGED",4,"bebcaf"],["CliffMediumType8","MOUNTAIN_RUGGED",4,"838486"],["CliffMediumType10","MOUNTAIN_RUGGED",4,"747678"],["CliffMediumType12","MOUNTAIN_RUGGED",4,"706c61"],["CliffMediumType23","MOUNTAIN_RUGGED",4,"7c7b77"],["CliffMediumType15b","MOUNTAIN_RUGGED",4,"928e6d"],["CliffMediumType16","MOUNTAIN_RUGGED",4,"8a8c86"],["CliffMediumType17","MOUNTAIN_RUGGED",4,"9b9372"],["CliffMediumType17b","MOUNTAIN_RUGGED",4,"908780"],["CliffMediumType17bsnowy","MOUNTAIN_RUGGED",4,"aaa5a0"],["CliffMediumType9","MOUNTAIN_RUGGED",4,"8f8f8e"],["GrassMediumType23","MOUNTAIN_RUGGED",4,"707763"],["GrassMediumType16","MOUNTAIN_RUGGED",4,"828366"],["GrassMediumType17","MOUNTAIN_RUGGED",4,"75764c"],["GrassMediumType10","MOUNTAIN_RUGGED",4,"656a38"],["GrassMediumType10b","MOUNTAIN_RUGGED",4,"868e45"],["GrassMediumType11","MOUNTAIN_RUGGED",4,"797940"],["GrassMediumType11b","MOUNTAIN_RUGGED",4,"70634d"],["DirtType1","MOUNTAIN_RUGGED",2,"7d6a57"],["DirtMediumType1","MOUNTAIN_RUGGED",4,"595850"],["DirtMediumType5","MOUNTAIN_RUGGED",4,"8a8372"],["DirtMediumType14","MOUNTAIN_RUGGED",4,"85807c"],["CliffLargeType8","MOUNTAIN_RUGGED",6,"878a82"],["GrassMediumType9","MOUNTAIN_RUGGED",4,"6c5c45"],["GrassMediumType4","MOUNTAIN_RUGGED",4,"6c6959"],["GrassMediumType20","MOUNTAIN_RUGGED",4,"7a8863"],["GrassMediumType24","MOUNTAIN_RUGGED",4,"78835b"],["CliffMediumType1","MOUNTAIN_RUGGED",4,"838779"],["CliffLargeType1","MOUNTAIN_RUGGED",6,"908780"],["DirtMediumType14","MOUNTAIN_RUGGED",4,"85807c"],["DirtMediumType7","MOUNTAIN_RUGGED",4,"9fa09f"],["CliffMediumType5","MOUNTAIN_RUGGED",4,"828282"],["RocksType3","MOUNTAIN_RUGGED",2,"6c705f"],["GrassMediumType37a","GRASS_COBBLESTONE",4,"697628"],["GrassMediumType37b","GRASS_COBBLESTONE",4,"5f6c19"],["GrassMediumType37c","GRASS_COBBLESTONE",4,"646e46"],["GrassMediumType37d","GRASS_COBBLESTONE",4,"5e5a2f"],["GrassMediumType37e","GRASS_COBBLESTONE",4,"949e42"],["GrassMediumType37f","GRASS_COBBLESTONE",4,"778736"],["GrassMediumType37g","GRASS_COBBLESTONE",4,"616033"],["GrassMediumType38a","GRASS_COBBLESTONE",4,"4c5b1e"],["Grass02","GRASS_COBBLESTONE",10,"748237"],["Cobble01","GRASS_COBBLESTONE",4,"968671"],["Cobble03","GRASS_COBBLESTONE",4,"8a7a6b"],["RocksType4","GRASS_COBBLESTONE",2,"727567"],["RocksMediumType1","GRASS_COBBLESTONE",4,"c6a976"],["CobblestoneType1","GRASS_COBBLESTONE",2,"8a816b"],["GrassMediumType31","GRASS_COBBLESTONE",4,"65802d"],["GrassMediumType30","GRASS_COBBLESTONE",4,"676b3b"],["GrassMediumType12Leaves","GRASS_COBBLESTONE",4,"594d33"],["GrassMediumType10","GRASS_COBBLESTONE",4,"656a38"],["GrassMediumType7","GRASS_COBBLESTONE",4,"65792d"],["GrassMediumType8","GRASS_COBBLESTONE",4,"4c5b1e"],["DirtType1","GRASS_ACCENT",2,"7d6a57"],["DirtType2","GRASS_ACCENT",2,"7a583a"],["DirtType3","GRASS_ACCENT",2,"73563c"],["GrassMediumType26","GRASS_ACCENT",4,"7b8c52"],["GrassMediumType19","GRASS_ACCENT",4,"8e9489"],["GrassMediumType13Leaves","GRASS_ACCENT",4,"625937"],["GrassMediumType15","GRASS_ACCENT",4,"7f935a"],["GrassMediumType25","GRASS_ACCENT",4,"808366"],["GrassMediumType1","GRASS_ACCENT",4,"8e934f"],["GrassMediumType2","GRASS_ACCENT",4,"8e9269"],["GrassMediumType14","GRASS_ACCENT",4,"506c45"],["GrassType1","RESIDENTIAL",2,"536b32"],["GrassLargeType1","RESIDENTIAL",6,"7e814e"],["GrassMediumType5","RESIDENTIAL",4,"958d69"],["GrassMediumType6","RESIDENTIAL",4,"888459"],["GrassMediumType7","RESIDENTIAL",4,"65792d"],["GrassMediumType12","RESIDENTIAL",4,"71754a"],["GrassMediumType18","RESIDENTIAL",4,"74a055"],["GrassMediumType21","RESIDENTIAL",4,"7e7c45"],["GrassMediumType22","RESIDENTIAL",4,"7e854f"],["GrassMediumType28","RESIDENTIAL",4,"9c7f60"],["GrassMediumType33","RESIDENTIAL",4,"6f853b"],["DirtMediumType1","RESIDENTIAL",4,"595850"],["DirtMediumType2","RESIDENTIAL",4,"4b4e3f"],["DirtType2","RESIDENTIAL",2,"7a583a"],["CropsType1","RESIDENTIAL",4,"848551"],["DirtMediumType15Snow","SNOW_RUGGED",4,"ececeb"],["DirtSnowType1","SNOW_RUGGED",4,"c0beb9"],["RocksMediumType1Snow","SNOW_RUGGED",4,"bbbbbb"],["CliffMediumType15snow","SNOW_RUGGED",4,"b4b6b1"],["CliffMediumType22","SNOW_RUGGED",4,"c0c0c0"],["CliffLargeType1snow","SNOW_RUGGED",6,"aba6a2"],["GrassMediumType23","SNOW_RUGGED",4,"707763"],["SandMediumType9Snow","SNOW_RUGGED",4,"dab97d"],["SandMediumType9Snow2","SNOW_RUGGED",4,"dfc79c"],["SandMediumType9Snow3","SNOW_RUGGED",4,"e3d3b8"],["SnowType1","SNOW_FLAT",2,"d3d4ca"],["DirtMediumType15Snow","SNOW_FLAT",4,"ececeb"],["SnowType2","SNOW_FLAT",2,"d4dae0"],["SnowType3","SNOW_FLAT",2,"d9dcd8"],["SnowType4","SNOW_FLAT",2,"ececec"],["SnowType5","SNOW_FLAT",4,"dfdfdf"],["SnowType7","SNOW_FLAT",4,"bbb994"],["SnowType7b","SNOW_FLAT",4,"d3d2bf"],["SnowType7c","SNOW_FLAT",4,"ddddd3"],["SnowLargeType1","SNOW_FLAT",6,"f0f0f0"],["SnowType6","SNOW_FLAT",4,"e9e9e9"],["ConcreteMediumType1Snow","SNOW_FLAT",4,"afb0af"],["GrassMediumType27brown","SNOW_FLAT",4,"d3bc8f"],["GrassLargeType1Snow","SNOW_FLAT",6,"95976d"],["SandMediumType13grassy3","SNOW_FLAT",4,"e5d5ad"],["SandMediumType13grassy2","SNOW_FLAT",4,"b7ab74"],["GrassMediumType27","FIELD",4,"758155"],["DirtMediumType5","FIELD",4,"8a8372"],["GrassMediumType11b","FIELD",4,"70634d"],["DirtType1","FIELD",2,"7d6a57"],["GreeceSand01","FIELD",2,"a99054"],["Cobble04","FIELD",10,"947a58"],["GrassMediumType22","FIELD",4,"7e854f"],["GrassMediumType1","FIELD",4,"8e934f"],["WoodType1","FIELD",2,"928577"],["DirtMediumType14","FIELD",4,"85807c"],["RocksType5","FIELD",2,"bdaa82"],["WoodType1small","FIELD",2,"938676"],["GrassMediumType3","FIELD",4,"666a45"],["GrassMediumType37d","FIELD",4,"5e5a2f"],["GrassMediumType37g","FIELD",4,"616033"],["ConcreteMediumType1","CONCRETE",4,"9a9b9a"],["ConcreteMediumType1Snow","CONCRETE",4,"afb0af"],["ConcreteType1","CONCRETE",2,"959791"],["ConcreteType2","CONCRETE",2,"9b9b9b"],["ConcreteType3","CONCRETE",2,"b0b4b1"],["ConcreteType4","CONCRETE",2,"989385"],["ConcreteType4","CONCRETE",2,"989385"],["ConcreteType5","CONCRETE",2,"b5b0a5"],["ConcreteType6","CONCRETE",2,"c8c5bb"],["ConcreteType7","CONCRETE",2,"c8c5bc"],["DirtMediumType4","ROCK_ACCENT",4,"acb1ad"],["CliffLargeType2","ROCK_ACCENT",6,"9a767e"],["CliffLargeType4","ROCK_ACCENT",6,"55444e"],["RocksType3blue","ROCK_ACCENT",2,"567488"],["CliffLargeType7","ROCK_ACCENT",6,"85837f"],["CliffMediumType11","ROCK_ACCENT",4,"6e7d55"],["CliffMediumType21","ROCK_ACCENT",4,"7c8880"],["CliffLargeType6","TRANSITION",6,"878874"],["CliffLargeType6b","TRANSITION",6,"90916b"],["CliffLargeType7","TRANSITION",6,"85837f"],["CliffMediumType13","TRANSITION",4,"949a95"],["CliffMediumType14","TRANSITION",4,"7e956a"],["CliffMediumType18","TRANSITION",4,"a48967"],["CliffMediumType2","TRANSITION",4,"8e8b87"],["CliffMediumType3","TRANSITION",4,"82837f"],["CliffLargeType6","TRANSITION",6,"878874"],["CliffLargeType7","TRANSITION",6,"85837f"],["CliffMediumType8b","TRANSITION",4,"978f6e"],["GrassMediumType23brown","TRANSITION",4,"a89a6d"],["RocksMediumType1Snow2","TRANSITION",4,"868686"],["RocksType1","TRANSITION",2,"828685"],["RocksType2","TRANSITION",2,"908f8f"],["SandLargeType1","TRANSITION",6,"b19b84"]];
@@ -552,7 +566,7 @@ const S = {
   objGroup: 'start', objName: 'Player_1_Start', customObj: '',
   cpMode: 'select', clip: null, cpH: true, cpT: true, cpO: true, cpRot: 0, cpFX: false, cpFY: false,
 };
-let selRect = null, ghost = null, focus3d = null;
+let selRect = null, ghost = null, focus3d = null, gen = 0;
 let M = null; // current map
 let view = { s: 2, ox: 0, oy: 0 };
 let img = null, imgData = null, off = null;
@@ -586,7 +600,7 @@ function draftLoad() {
 
 // ---------- rendering ----------
 function setMap(m) {
-  M = m; undoStack = [];
+  M = m; undoStack = []; gen++;
   off = document.createElement('canvas'); off.width = M.W; off.height = M.H;
   img = off.getContext('2d'); imgData = img.createImageData(M.W, M.H);
   recountClasses();
@@ -736,20 +750,20 @@ function symPoints(gx, gy) {
   return pts;
 }
 function pushUndo() {
-  undoStack.push({ h: M.heights.slice(), t: M.tex.slice(), o: JSON.stringify(M.objects), d: M.texDirty });
+  gen++; undoStack.push({ h: M.heights.slice(), t: M.tex.slice(), o: JSON.stringify(M.objects), d: M.texDirty });
   if (undoStack.length > 15) undoStack.shift();
   $('#bUndo').disabled = false;
 }
 function undo() {
   const u = undoStack.pop(); if (!u) return;
-  M.heights.set(u.h); M.tex.set(u.t); M.objects = JSON.parse(u.o); M.texDirty = u.d;
+  gen++; M.heights.set(u.h); M.tex.set(u.t); M.objects = JSON.parse(u.o); M.texDirty = u.d;
   recountClasses(); renderRect(0, 0, M.W - 1, M.H - 1); updateMeter(); draw(); draftSave();
   $('#bUndo').disabled = !undoStack.length;
 }
 
 let flatTarget = 0;
 function applyBrush(gx, gy) {
-  const R = S.size, st = S.strength, W = M.W, H = M.H, h = M.heights;
+  gen++; const R = S.size, st = S.strength, W = M.W, H = M.H, h = M.heights;
   let bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1;
   for (const [px, py] of symPoints(gx, gy)) {
     const cx = Math.round(px), cy = Math.round(py);
@@ -850,7 +864,7 @@ cv.addEventListener('pointermove', e => {
   if (stroke && stroke.pending && Math.hypot(e.offsetX - stroke.sx, e.offsetY - stroke.sy) > 6) { clearTimeout(holdTimer); beginStroke(); }
   if (stroke && !stroke.pending && !stroke.done) {
     if (stroke.copy === 'sel') { selRect[2] = cursor[0]; selRect[3] = cursor[1]; }
-    else if (S.tool === 'move' && stroke.obj >= 0) { const [wx, wy] = gridToWorld(cursor[0], cursor[1]); M.objects[stroke.obj].x = wx; M.objects[stroke.obj].y = wy; }
+    else if (S.tool === 'move' && stroke.obj >= 0) { const [wx, wy] = gridToWorld(cursor[0], cursor[1]); gen++; M.objects[stroke.obj].x = wx; M.objects[stroke.obj].y = wy; }
     else if (S.tool === 'paint') applyBrush(cursor[0], cursor[1]);
   }
   draw();
@@ -948,7 +962,7 @@ function doPaste(gx, gy) {
     if (gx2 < 0 || gy2 < 0 || gx2 >= M.W || gy2 >= M.H) continue;
     const [wx, wy] = gridToWorld(gx2, gy2); M.objects.push(makeObject(M, o.name, wx, wy, a));
   }
-  renderRect(ox - 1, oy - 1, ox + dw, oy + dh); updateMeter();
+  gen++; renderRect(ox - 1, oy - 1, ox + dw, oy + dh); updateMeter();
   if (useT === S.cpT) toast('انلصق');
 }
 
@@ -996,6 +1010,7 @@ function v3Build() {
     const [gx, gy] = worldToGrid(o.x, o.y);
     if (Math.abs(gx - fx) > R || Math.abs(gy - fy) > R || /^Amb_/.test(o.name)) continue;
     const wp = o.name === '*Waypoints/Waypoint' ? dictGet(o, 'waypointName') || '' : null, pm = wp && /^Player_(\d)_Start$/.exec(wp);
+    if (wp === null && pushModel(o, gx, gy, out, hAt, fx, fy)) continue;
     if (pm) box(gx, gy, 1.4, 9, hexRgb(PLAYER_COLORS[(+pm[1] - 1) % 8]));
     else if (wp !== null) box(gx, gy, 0.6, 3, [0.44, 0.7, 0.85]);
     else if (/^Supply/.test(o.name)) box(gx, gy, 3, 2, [0.89, 0.76, 0.23]);
@@ -1018,8 +1033,9 @@ function v3Render() {
   const gl = V3.gl, c = $('#v3c'), r = c.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
   const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr); if (!w || !h) return;
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-  const data = v3Build();
-  gl.bindBuffer(gl.ARRAY_BUFFER, V3.buf); gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+  const key = focus3d.join() + '|' + gen + '|' + M.objects.length + '|' + MODELS.gen;
+  gl.bindBuffer(gl.ARRAY_BUFFER, V3.buf);
+  if (key !== V3.key) { const data = v3Build(); V3.key = key; V3.n = data.length / 6; gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW); }
   gl.viewport(0, 0, w, h); gl.clearColor(0.043, 0.047, 0.035, 1); gl.enable(gl.DEPTH_TEST);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enableVertexAttribArray(V3.lp); gl.vertexAttribPointer(V3.lp, 3, gl.FLOAT, false, 24, 0);
@@ -1027,8 +1043,141 @@ function v3Render() {
   const ty = M.heights[focus3d[0] + M.W * focus3d[1]] / 16, d = V3.dist * V3.R * 1.6;
   const eye = [d * Math.cos(V3.pitch) * Math.sin(V3.yaw), ty + d * Math.sin(V3.pitch), d * Math.cos(V3.pitch) * Math.cos(V3.yaw)];
   gl.uniformMatrix4fv(V3.lm, false, m4mul(m4persp(0.9, w / h, 0.5, 3000), m4look(eye, [0, ty, 0], [0, 1, 0])));
-  gl.drawArrays(gl.TRIANGLES, 0, data.length / 6);
+  gl.drawArrays(gl.TRIANGLES, 0, V3.n);
 }
+
+// ---------- real W3D models, read from the player's own .big files ----------
+const MODELS = { arcs: [], objModel: null, cache: new Map(), gen: 0 };
+async function openBig(file) {
+  const h = new DataView(await file.slice(0, 16).arrayBuffer());
+  const magic = String.fromCharCode(h.getUint8(0), h.getUint8(1), h.getUint8(2), h.getUint8(3));
+  if (magic !== 'BIGF' && magic !== 'BIG4') throw new Error(file.name + ' مش ملف big');
+  const n = h.getUint32(8, false), first = h.getUint32(12, false);
+  const d = new Uint8Array(await file.slice(16, first).arrayBuffer()), v = new DataView(d.buffer), idx = new Map();
+  let p = 0;
+  for (let i = 0; i < n; i++) {
+    const off = v.getUint32(p, false), sz = v.getUint32(p + 4, false); p += 8;
+    let s = ''; while (d[p]) s += String.fromCharCode(d[p++]); p++;
+    idx.set(s.toLowerCase().replace(/\//g, '\\'), [off, sz]);
+  }
+  return { file, idx, name: file.name };
+}
+async function bigRead(name) {
+  const key = name.toLowerCase();
+  for (const a of MODELS.arcs) { const e = a.idx.get(key); if (e) return new Uint8Array(await a.file.slice(e[0], e[0] + e[1]).arrayBuffer()); }
+  return null;
+}
+async function buildObjModels() {
+  const map = new Map(), reskin = [], dec = new TextDecoder('latin1');
+  for (const a of MODELS.arcs) for (const [k, e] of a.idx) {
+    if (!k.endsWith('.ini') || !k.includes('object')) continue;
+    const txt = dec.decode(await a.file.slice(e[0], e[0] + e[1]).arrayBuffer());
+    const re = /^(Object|ObjectReskin)[ \t]+(\S+)(?:[ \t]+(\S+))?/gm, list = []; let m;
+    while ((m = re.exec(txt))) list.push([m.index, m[1], m[2], m[3]]);
+    list.forEach((it, i) => {
+      const body = txt.slice(it[0], i + 1 < list.length ? list[i + 1][0] : txt.length);
+      const mm = /^[ \t]*Model[ \t]*=[ \t]*([^\s;]+)/im.exec(body), model = mm && mm[1].toUpperCase() !== 'NONE' ? mm[1] : null;
+      if (model) map.set(it[2].toLowerCase(), model);
+      else if (it[1] === 'ObjectReskin' && it[3]) reskin.push([it[2].toLowerCase(), it[3].toLowerCase()]);
+    });
+  }
+  for (let pass = 0; pass < 3; pass++) for (const [n, p] of reskin) if (!map.has(n) && map.has(p)) map.set(n, map.get(p));
+  return map;
+}
+function w3dChunks(d, s, e, fn) { const v = new DataView(d.buffer, d.byteOffset, d.byteLength); let p = s; while (p + 8 <= e) { const t = v.getUint32(p, true), sz = v.getUint32(p + 4, true) & 0x7fffffff; fn(t, p + 8, p + 8 + sz); p += 8 + sz; } }
+const cstr = (d, p, n) => { let s = ''; for (let i = 0; i < n && d[p + i]; i++) s += String.fromCharCode(d[p + i]); return s; };
+function parseW3D(d) {
+  const v = new DataView(d.buffer, d.byteOffset, d.byteLength), out = { meshes: [], hier: null, hlod: null };
+  w3dChunks(d, 0, d.length, (t, s, e) => {
+    if (t === 0x0) {
+      const m = {};
+      w3dChunks(d, s, e, (t2, s2, e2) => {
+        if (t2 === 0x1f) { m.attrs = v.getUint32(s2 + 4, true); m.name = cstr(d, s2 + 8, 16); m.cont = cstr(d, s2 + 24, 16); }
+        else if (t2 === 0x2) m.v = new Float32Array(d.buffer.slice(d.byteOffset + s2, d.byteOffset + e2));
+        else if (t2 === 0x20) { const n = (e2 - s2) / 32, tr = new Uint32Array(n * 3); for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) tr[i * 3 + k] = v.getUint32(s2 + i * 32 + k * 4, true); m.t = tr; }
+        else if (t2 === 0xe) m.skin = true;
+      });
+      out.meshes.push(m);
+    } else if (t === 0x100) {
+      const h = [];
+      w3dChunks(d, s, e, (t2, s2, e2) => { if (t2 === 0x102) for (let p = s2; p + 60 <= e2; p += 60) h.push({ parent: v.getUint32(p + 16, true), t: [0, 1, 2].map(k => v.getFloat32(p + 20 + 4 * k, true)), q: [0, 1, 2, 3].map(k => v.getFloat32(p + 44 + 4 * k, true)) }); });
+      out.hier = h;
+    } else if (t === 0x700) {
+      const h = { lods: [], agg: [] };
+      w3dChunks(d, s, e, (t2, s2, e2) => {
+        if (t2 === 0x701) h.hname = cstr(d, s2 + 24, 16);
+        else if (t2 === 0x702 || t2 === 0x705) { const arr = []; w3dChunks(d, s2, e2, (t3, s3) => { if (t3 === 0x704) arr.push([v.getUint32(s3, true), cstr(d, s3 + 4, 32).toUpperCase()]); }); (t2 === 0x702 ? h.lods : h.agg).push(arr); }
+      });
+      out.hlod = h;
+    }
+  });
+  return out;
+}
+const qmul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0], a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+const qrot = (q, p) => {
+  const [x, y, z, w] = q, ix = w * p[0] + y * p[2] - z * p[1], iy = w * p[1] + z * p[0] - x * p[2], iz = w * p[2] + x * p[1] - y * p[0], iw = -x * p[0] - y * p[1] - z * p[2];
+  return [ix * w - iw * x - iy * z + iz * y, iy * w - iw * y - iz * x + ix * z, iz * w - iw * z - ix * y + iy * x];
+};
+async function loadModel(name) {
+  try {
+    const d = await bigRead('art\\w3d\\' + name + '.w3d'); if (!d) return null;
+    const f = parseW3D(d); let hier = f.hier;
+    if (!hier && f.hlod && f.hlod.hname) { const hd = await bigRead('art\\w3d\\' + f.hlod.hname + '.w3d'); if (hd) hier = parseW3D(hd).hier; }
+    const wt = [];
+    if (hier) hier.forEach((pv, i) => { const par = pv.parent < i ? wt[pv.parent] : null; wt[i] = par ? { q: qmul(par.q, pv.q), t: qrot(par.q, pv.t).map((x, k) => x + par.t[k]) } : { q: pv.q, t: pv.t }; });
+    const byName = new Map(f.meshes.map(m => [(m.cont + '.' + m.name).toUpperCase(), m]));
+    let parts = [];
+    if (f.hlod && f.hlod.lods.length) { for (const [b, n] of f.hlod.lods[f.hlod.lods.length - 1].concat(...f.hlod.agg)) { const m = byName.get(n) || f.meshes.find(x => x.name.toUpperCase() === n.split('.').pop()); if (m) parts.push([m, wt[b]]); } }
+    else parts = f.meshes.map(m => [m, null]);
+    const P = [], Sh = [], L = [0.4, 0.45, 0.8];
+    for (const [m, x] of parts) {
+      if (!m.v || !m.t || (m.attrs & 0x1000) || m.skin || /SHADOW|BOUND|^BOX/i.test(m.name || '')) continue;
+      const tv = [];
+      for (let i = 0; i < m.v.length; i += 3) { let p = [m.v[i], m.v[i + 1], m.v[i + 2]]; if (x) { p = qrot(x.q, p); p = [p[0] + x.t[0], p[1] + x.t[1], p[2] + x.t[2]]; } tv.push(p); }
+      for (let i = 0; i < m.t.length; i += 3) {
+        const a = tv[m.t[i]], b = tv[m.t[i + 1]], c = tv[m.t[i + 2]]; if (!a || !b || !c) continue;
+        const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+        const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], nl = Math.hypot(...n) || 1;
+        const s = 0.45 + 0.55 * Math.abs((n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) / nl);
+        P.push(...a, ...b, ...c); Sh.push(s, s, s);
+      }
+    }
+    return P.length ? { p: new Float32Array(P), s: new Float32Array(Sh) } : null;
+  } catch (e) { return null; }
+}
+function pushModel(o, gx, gy, out, hAt, fx, fy) {
+  if (!MODELS.objModel) return false;
+  const mn = MODELS.objModel.get(o.name.toLowerCase()); if (!mn) return false;
+  const g = MODELS.cache.get(mn);
+  if (g === undefined) { MODELS.cache.set(mn, null); loadModel(mn).then(r => { MODELS.cache.set(mn, r); if (r) { MODELS.gen++; draw(); } }); return false; }
+  if (!g) return false;
+  const tint = /^Tree|Bush|Shrub/.test(o.name) ? [0.42, 0.62, 0.3] : /^Rock/.test(o.name) ? [0.62, 0.59, 0.52] : /^Supply/.test(o.name) ? [0.88, 0.76, 0.42] : /^Tech/.test(o.name) ? [0.84, 0.66, 0.5] : [0.8, 0.77, 0.7];
+  const c = Math.cos(o.angle), s = Math.sin(o.angle), base = hAt(Math.round(gx), Math.round(gy)), p = g.p;
+  for (let i = 0, j = 0; i < p.length; i += 3, j++) {
+    const x = p[i] / 10, y = p[i + 1] / 10, k = g.s[j];
+    out.push(gx + x * c - y * s - fx, base + p[i + 2] / 10, -(gy + x * s + y * c - fy), tint[0] * k, tint[1] * k, tint[2] * k);
+  }
+  return true;
+}
+function idb() { return new Promise((res, rej) => { const r = indexedDB.open('zhme', 1); r.onupgradeneeded = () => r.result.createObjectStore('big'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbTx(mode, fn) { const db = await idb(); return new Promise(r => { const tx = db.transaction('big', mode), out = fn(tx.objectStore('big')); tx.oncomplete = () => r(out); tx.onerror = tx.onabort = () => r(out); }); }
+async function useArchives(files, persist) {
+  for (const f of files) {
+    try { const a = await openBig(f); MODELS.arcs = MODELS.arcs.filter(x => x.name.toLowerCase() !== a.name.toLowerCase()).concat(a); }
+    catch (e) { toast(e.message); }
+    if (persist) try { await idbTx('readwrite', st => st.put(f, f.name)); } catch (e) {}
+  }
+  MODELS.objModel = await buildObjModels(); MODELS.cache.clear(); MODELS.gen++;
+  const ok = MODELS.objModel.size > 0 && MODELS.arcs.some(a => a.idx.has('art\\w3d\\absupply.w3d') || [...a.idx.keys()].some(k => k.endsWith('.w3d')));
+  $('#v3stat').textContent = ok ? '3D · موديلات ✓' : '3D';
+  $('#modelsStat').textContent = MODELS.arcs.length ? 'محمّل: ' + MODELS.arcs.map(a => a.name).join('، ') + (ok ? '' : ' (ناقص INIZH.big أو W3DZH.big)') : 'ما في ملفات محملة.';
+  draw();
+}
+$('#v3models').onclick = () => openSheet('#sheetModels');
+$('#bPickBig').onclick = () => $('#bigIn').click();
+$('#bigIn').addEventListener('change', async e => { const fs = [...e.target.files]; e.target.value = ''; if (!fs.length) return; toast('بقرأ الملفات…'); await useArchives(fs, true); toast('تم. افتح الـ 3D.'); });
+$('#bClearBig').onclick = async () => { try { await idbTx('readwrite', st => st.clear()); } catch (e) {} MODELS.arcs = []; MODELS.objModel = null; MODELS.cache.clear(); MODELS.gen++; await useArchives([], false); };
+(async () => { try { const files = []; await idbTx('readonly', st => { const c = st.openCursor(); c.onsuccess = () => { const cur = c.result; if (cur) { files.push(new File([cur.value], cur.key)); cur.continue(); } }; }); if (files.length) await useArchives(files, false); } catch (e) {} })();
 (function v3Controls() {
   const box = $('#v3'), c = $('#v3c'), bar = $('#v3bar'), ptr = new Map(); let pinch = 0;
   const savePos = () => { try { localStorage.setItem('zhme.v3', JSON.stringify({ l: box.style.left, t: box.style.top, big: box.classList.contains('big') })); } catch (e) {} };
