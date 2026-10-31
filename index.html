@@ -67,6 +67,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
 #tools { display: flex; background: var(--panel); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); overflow-x: auto; scrollbar-width: none; }
 .hud:empty { display: none; }
+body.full3d .v3 { position: fixed; inset: 0; width: auto; max-width: none; aspect-ratio: auto; border: 0; border-radius: 0; z-index: 40; box-shadow: none; }
+body.full3d .v3bar { position: absolute; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 2; background: linear-gradient(rgba(17,19,15,.85), rgba(17,19,15,0)); padding: 8px max(10px, env(safe-area-inset-right, 0px)) 18px max(10px, env(safe-area-inset-left, 0px)); cursor: default; }
+body.full3d .v3bar button { width: 40px; height: 36px; font-size: 18px; background: rgba(26,29,22,.8); border: 1px solid var(--line); border-radius: 8px; margin-inline-start: 4px; }
+body.full3d #v3c { grid-row: 1 / -1; }
+.v3hint { position: absolute; bottom: max(14px, env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); background: rgba(17,19,15,.75); padding: 5px 12px; border-radius: 999px; pointer-events: none; display: none; white-space: nowrap; }
+body.full3d .v3hint { display: block; }
+#panel.collapsed { display: none; }
 .v3 { position: absolute; top: 44px; right: max(10px, env(safe-area-inset-right, 0px)); width: min(46%, 340px); aspect-ratio: 4 / 3; max-width: 100%; background: #0b0c09; border: 1px solid var(--accent); border-radius: 8px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; box-shadow: 0 6px 20px rgba(0,0,0,.5); z-index: 5; }
 .v3.big { width: min(80%, 560px); }
 .v3bar { display: flex; align-items: center; gap: 4px; padding: 3px 4px 3px 8px; background: var(--raise); cursor: move; touch-action: none; font-family: var(--f-mono); font-size: 11px; color: var(--muted); direction: ltr; }
@@ -105,13 +112,19 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .field span { font-size: 12px; color: var(--muted); }
 .field input, .field select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; min-width: 0; width: 100%; }
 .actions { display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
-@media (min-width: 900px) {
+@media (min-width: 900px), (orientation: landscape) and (max-height: 600px) {
   #app { display: grid; grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: auto minmax(0, 1fr) auto; }
   .top > * { min-width: 0; }
   .top { grid-column: 1 / -1; }
   #stage { grid-column: 1; grid-row: 2; }
   #panel { grid-column: 2; grid-row: 2 / 4; max-height: none; border-top: 0; border-right: 1px solid var(--line); align-content: start; }
   #tools { grid-column: 1; grid-row: 3; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  #app { grid-template-columns: minmax(0, 1fr) 280px; }
+  .top { padding-block: 4px; } .brand small { display: none; } .btn { padding: 5px 9px; }
+  .tool { padding: 4px 2px 5px; font-size: 10px; } .tool svg { width: 18px; height: 18px; }
+  .fab { flex-direction: row; } .fab button { width: 36px; height: 36px; }
 }
 @media (max-width: 520px) { .brand small { display: none; } .cmd .btn.optional { display: none; } }
 @media (prefers-reduced-motion: no-preference) { .tool, .chip, .sw, .ob { transition: background .12s, color .12s, border-color .12s; } }
@@ -132,11 +145,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     <canvas id="cv"></canvas>
     <div class="hud" id="hud"></div>
     <div class="v3" id="v3" hidden>
-      <div class="v3bar" id="v3bar"><span id="v3stat">3D</span><button id="v3models" aria-label="تحميل موديلات اللعبة" style="width:auto;font-size:11px;padding:0 6px;color:var(--accent)">موديلات</button><button id="v3zin" aria-label="تكبير">+</button><button id="v3zout" aria-label="تصغير">−</button><button id="v3size" aria-label="تكبير العرض">⇲</button><button id="v3close" aria-label="إغلاق">×</button></div>
+      <div class="v3bar" id="v3bar"><span id="v3stat">3D</span><button id="v3models" aria-label="تحميل موديلات اللعبة" style="width:auto;font-size:11px;padding:0 6px;color:var(--accent)">موديلات</button><button id="v3zin" aria-label="تكبير">+</button><button id="v3zout" aria-label="تصغير">−</button><button id="v3size" aria-label="تكبير العرض">⇲</button><button id="v3full" aria-label="ملء الشاشة">⛶</button><button id="v3close" aria-label="إغلاق">×</button></div>
       <canvas id="v3c"></canvas>
+      <div class="v3hint">إصبع: تحريك · إصبعين: تكبير ولف · اسحب الإصبعين لفوق/تحت: ميلان</div>
     </div>
     <div class="fab">
+      <button id="bFull3d" aria-label="3D كامل الشاشة" title="3D كامل">⛶</button>
       <button id="b3d" aria-label="عرض ثلاثي الأبعاد" style="font-size:12px;font-weight:700">3D</button>
+      <button id="bRotate" aria-label="تدوير الشاشة" title="تدوير">⟳</button>
       <button id="bFit" aria-label="عرض الخريطة كاملة">⤢</button>
       <button id="bMenu" aria-label="المزيد">⋯</button>
     </div>
@@ -1039,7 +1055,7 @@ cv.addEventListener('pointerdown', e => {
   if (pointers.size > 2) return;
   const [gx, gy] = toGrid(e.offsetX, e.offsetY);
   cursor = [gx, gy];
-  if (gx >= 0 && gy >= 0 && gx < M.W && gy < M.H) focus3d = [Math.round(gx), Math.round(gy)];
+  if (gx >= 0 && gy >= 0 && gx < M.W && gy < M.H) { focus3d = [Math.round(gx), Math.round(gy)]; V3.off = [0, 0]; }
   if (S.tool === 'pan') { gesture = { pan: true, last: [e.offsetX, e.offsetY] }; return; }
   stroke = { pending: true, x: gx, y: gy, sx: e.offsetX, sy: e.offsetY };
   // wait briefly so a second finger can turn this into a pinch without editing
@@ -1185,7 +1201,18 @@ function doPaste(gx, gy) {
 }
 
 // ---------- 3D mini view (raw WebGL, works offline) ----------
-const V3 = { R: 40, yaw: 0, pitch: 0.75, dist: 1.4, gl: null, batches: [] };
+const V3 = { R: 40, yaw: 0, pitch: 0.75, dist: 1.4, gl: null, batches: [], off: [0, 0] };
+// drag the 3D ground: move the focus point in grid cells, rebuilding the mesh only every few cells
+function v3Pan(dx, dy, hpx) {
+  const k = V3.dist * V3.R * 3.2 / Math.max(200, hpx), cy = Math.cos(V3.yaw), sy = Math.sin(V3.yaw);
+  const X = -k * (dx * cy + dy * sy), Z = -k * (-dx * sy + dy * cy);
+  V3.off[0] += X; V3.off[1] -= Z;
+  if (Math.abs(V3.off[0]) > 6 || Math.abs(V3.off[1]) > 6) {
+    const sx = Math.round(V3.off[0]), sy2 = Math.round(V3.off[1]);
+    focus3d = [Math.max(0, Math.min(M.W - 1, focus3d[0] + sx)), Math.max(0, Math.min(M.H - 1, focus3d[1] + sy2))];
+    V3.off[0] -= sx; V3.off[1] -= sy2;
+  }
+}
 function v3Init() {
   const gl = $('#v3c').getContext('webgl', { antialias: true });
   if (!gl) { toast('الجهاز ما بيدعم 3D'); return false; }
@@ -1292,9 +1319,11 @@ function v3Render() {
   }
   gl.viewport(0, 0, w, h); gl.clearColor(0.043, 0.047, 0.035, 1); gl.enable(gl.DEPTH_TEST);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  const ty = M.heights[focus3d[0] + M.W * focus3d[1]] / 16, d = V3.dist * V3.R * 1.6;
+  const ox = V3.off[0], oz = -V3.off[1], hx = Math.max(0, Math.min(M.W - 1, Math.round(focus3d[0] + ox))), hy = Math.max(0, Math.min(M.H - 1, Math.round(focus3d[1] + V3.off[1])));
+  const ty = M.heights[hx + M.W * hy] / 16, d = V3.dist * V3.R * 1.6;
   const eye = [d * Math.cos(V3.pitch) * Math.sin(V3.yaw), ty + d * Math.sin(V3.pitch), d * Math.cos(V3.pitch) * Math.cos(V3.yaw)];
-  gl.uniformMatrix4fv(V3.lm, false, m4mul(m4persp(0.9, w / h, 0.5, 3000), m4look(eye, [0, ty, 0], [0, 1, 0])));
+  eye[0] += ox; eye[2] += oz;
+  gl.uniformMatrix4fv(V3.lm, false, m4mul(m4persp(0.9, w / h, 0.5, 3000), m4look(eye, [ox, ty, oz], [0, 1, 0])));
   for (const b of V3.batches) {
     const water = b.tn === '~water';
     if (water) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
@@ -1564,11 +1593,21 @@ $('#bClearBig').onclick = async () => { try { await idbTx('readwrite', st => st.
   };
   $('#v3close').onclick = () => { box.hidden = true; draw(); };
   $('#v3size').onclick = () => { box.classList.toggle('big'); savePos(); draw(); };
-  c.addEventListener('pointerdown', e => { try { c.setPointerCapture(e.pointerId); } catch (err) {} ptr.set(e.pointerId, [e.clientX, e.clientY]); if (ptr.size === 2) { const [a, b] = [...ptr.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
+  let twist = 0, pcy = 0;
+  const two = () => { const [a, b] = [...ptr.values()]; return [Math.hypot(a[0] - b[0], a[1] - b[1]), Math.atan2(b[1] - a[1], b[0] - a[0]), (a[1] + b[1]) / 2]; };
+  c.addEventListener('pointerdown', e => { try { c.setPointerCapture(e.pointerId); } catch (err) {} ptr.set(e.pointerId, [e.clientX, e.clientY]); if (ptr.size === 2) [pinch, twist, pcy] = two(); });
   c.addEventListener('pointermove', e => {
     if (!ptr.has(e.pointerId)) return;
     const last = ptr.get(e.pointerId); ptr.set(e.pointerId, [e.clientX, e.clientY]);
-    if (ptr.size === 2) { const [a, b] = [...ptr.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) V3.dist = Math.max(0.08, Math.min(6, V3.dist * pinch / d)); pinch = d; }
+    const full = document.body.classList.contains('full3d');
+    if (ptr.size === 2) {
+      const [d, ang, cy] = two();
+      if (pinch) {
+        V3.dist = Math.max(0.08, Math.min(6, V3.dist * pinch / d));
+        if (full) { let da = ang - twist; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; V3.yaw -= da; V3.pitch = Math.max(0.12, Math.min(1.45, V3.pitch + (cy - pcy) * 0.006)); }
+      }
+      [pinch, twist, pcy] = [d, ang, cy];
+    } else if (full) v3Pan(e.clientX - last[0], e.clientY - last[1], c.clientHeight);
     else { V3.yaw -= (e.clientX - last[0]) * 0.01; V3.pitch = Math.max(0.12, Math.min(1.45, V3.pitch + (e.clientY - last[1]) * 0.01)); }
     draw();
   });
@@ -1598,7 +1637,8 @@ function buildTools() {
 }
 $('#tools').addEventListener('click', e => {
   const b = e.target.closest('[data-tool]'); if (!b) return;
-  S.tool = b.dataset.tool; buildTools(); updatePanel(); draw();
+  if (S.tool === b.dataset.tool) { $('#panel').classList.toggle('collapsed'); resize(); return; }
+  $('#panel').classList.remove('collapsed'); S.tool = b.dataset.tool; buildTools(); updatePanel(); draw(); resize();
 });
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function symSeg() {
@@ -2048,6 +2088,23 @@ $('#mValid').onclick = () => { $('#validBody').innerHTML = validate().map(l => `
 $('#mModels').onclick = () => openSheet('#sheetModels');
 $('#v3zin').onclick = () => { V3.dist = Math.max(0.08, V3.dist * 0.7); draw(); };
 $('#v3zout').onclick = () => { V3.dist = Math.min(6, V3.dist * 1.4); draw(); };
+
+// ---------- full3d toggle + screen rotation ----------
+function setFull3d(on) {
+  const box = $('#v3');
+  if (on) { if (!V3.gl && !v3Init()) return; if (!focus3d) focus3d = [Math.round(M.W / 2), Math.round(M.H / 2)]; box.hidden = false; }
+  document.body.classList.toggle('full3d', on); draw();
+}
+$('#bFull3d').onclick = () => setFull3d(true);
+$('#v3full').onclick = () => setFull3d(!document.body.classList.contains('full3d'));
+$('#v3close').addEventListener('click', () => document.body.classList.remove('full3d'));
+let orient = 'auto';
+$('#bRotate').onclick = async () => {
+  const next = orient === 'landscape' ? 'portrait' : 'landscape'; orient = next;
+  if (window.AndroidApp && window.AndroidApp.setOrientation) { window.AndroidApp.setOrientation(next); return; }
+  try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); await screen.orientation.lock(next); }
+  catch (e) { toast('لف الهاتف بإيدك، أو شغّل التدوير التلقائي'); }
+};
 
 prefsLoad(); buildTools(); fillNewForm();
 new ResizeObserver(() => { resize(); }).observe(cv);
